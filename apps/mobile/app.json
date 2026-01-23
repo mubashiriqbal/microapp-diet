@@ -5,18 +5,28 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "sdkVersion": "49.0.0",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "ios": {
       "infoPlist": {
         "NSCameraUsageDescription": "Allow camera access to identify products."
       }
     },
     "android": {
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA"
+      ],
+      "package": "com.askmobisoft55.whatsinmyfood"
     },
     "extra": {
       "apiBase": "${EXPO_PUBLIC_API_BASE}",
-      "userId": "${EXPO_PUBLIC_USER_ID}"
+      "userId": "${EXPO_PUBLIC_USER_ID}",
+      "eas": {
+        "projectId": "f69b269a-e71d-4cf8-b2ba-bc15955ae252"
+      }
     }
   }
 }

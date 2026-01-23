@@ -1,17 +1,30 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/router"
 import { analyzeFromImages, postHistory } from "@wimf/shared"
+import { getProfile, getToken } from "../lib/auth"
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000"
-const demoUser = process.env.NEXT_PUBLIC_DEMO_USER_ID || "demo-user-1"
 
 export default function Scan() {
   const router = useRouter()
+  const [token, setToken] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [labelFile, setLabelFile] = useState<File | null>(null)
 
   const progress = useMemo(() => (labelFile ? 100 : 0), [labelFile])
+
+  useEffect(() => {
+    const storedToken = getToken()
+    const profile = getProfile()
+    if (!storedToken || !profile) {
+      router.push("/login")
+      return
+    }
+    setToken(storedToken)
+    setUserId(profile.id)
+  }, [router])
 
   const handleSubmit = async () => {
     if (!labelFile) {
@@ -24,19 +37,27 @@ export default function Scan() {
 
     const formData = new FormData()
     formData.append("frontImage", labelFile)
-    formData.append("userId", demoUser)
+    if (userId) {
+      formData.append("userId", userId)
+    }
 
     try {
-      const response = await analyzeFromImages({ baseUrl: apiBase }, formData)
-      await postHistory({
-        baseUrl: apiBase
-      }, {
-        userId: demoUser,
-        analysisSnapshot: response,
-        extractedText: response.parsing.extractedText,
-        parsedIngredients: response.ingredientBreakdown.map((item) => item.name),
-        parsedNutrition: response.nutritionHighlights
-      })
+      const response = await analyzeFromImages({ baseUrl: apiBase, token: token || undefined }, formData)
+      if (userId) {
+        await postHistory(
+          {
+            baseUrl: apiBase,
+            token: token || undefined
+          },
+          {
+            userId,
+            analysisSnapshot: response,
+            extractedText: response.parsing.extractedText,
+            parsedIngredients: response.ingredientBreakdown.map((item) => item.name),
+            parsedNutrition: response.nutritionHighlights
+          }
+        )
+      }
 
       sessionStorage.setItem("wimf.analysis", JSON.stringify(response))
       router.push("/results")
@@ -107,6 +128,13 @@ export default function Scan() {
             disabled={loading}
           >
             {loading ? "Analyzing..." : "Analyze image"}
+          </button>
+          <button
+            className="btn btn-outline-light mt-3 ms-2"
+            onClick={() => setLabelFile(null)}
+            disabled={loading}
+          >
+            Reupload image
           </button>
           {error && <div className="alert alert-warning mt-3">{error}</div>}
         </div>

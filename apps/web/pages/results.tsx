@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { getPrefs } from "@wimf/shared"
 import type { AnalyzeFromImagesResponse, UserPrefs } from "@wimf/shared"
+import { getProfile, getToken } from "../lib/auth"
+import { addJournalItem } from "../lib/tracking"
 
 export default function Results() {
   const [analysis, setAnalysis] = useState<AnalyzeFromImagesResponse | null>(null)
   const [prefs, setPrefs] = useState<UserPrefs | null>(null)
   const [activeFlag, setActiveFlag] =
     useState<AnalyzeFromImagesResponse["personalizedFlags"][number] | null>(null)
+  const [status, setStatus] = useState("")
+  const [mealType, setMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack">("snack")
+  const [grams, setGrams] = useState(50)
   const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000"
-  const demoUser = process.env.NEXT_PUBLIC_DEMO_USER_ID || "demo-user-1"
+  const profile = typeof window !== "undefined" ? getProfile() : null
 
   useEffect(() => {
     const stored = sessionStorage.getItem("wimf.analysis")
@@ -20,15 +25,18 @@ export default function Results() {
   useEffect(() => {
     const loadPrefs = async () => {
       try {
-        const remote = await getPrefs({ baseUrl: apiBase }, demoUser)
+        if (!profile) return
+        const remote = await getPrefs({ baseUrl: apiBase, token: getToken() || undefined }, profile.id)
         setPrefs(remote)
       } catch {
         setPrefs(null)
       }
     }
 
-    loadPrefs()
-  }, [apiBase, demoUser])
+    if (profile) {
+      loadPrefs()
+    }
+  }, [apiBase, profile])
 
   const caloriesPer100g = useMemo(() => {
     if (!analysis) return null
@@ -96,6 +104,59 @@ export default function Results() {
     )
   }
 
+  const handleEat = async () => {
+    if (caloriesPer100g === null) {
+      setStatus("Calories unknown. Try another image with visible nutrition.")
+      return
+    }
+    setStatus("Adding to journal...")
+    addJournalItem({
+      id: `${Date.now()}`,
+      date: new Date().toISOString().slice(0, 10),
+      mealType: "snack",
+      grams: 50,
+      createdAt: new Date().toISOString(),
+      analysisSnapshot: analysis,
+      name: analysis.productName || "Scan item",
+      nutritionPer100g: {
+        id: "scan",
+        name: analysis.productName || "Scan item",
+        caloriesPer100g,
+        protein_g: analysis.nutritionHighlights?.protein_g ?? null,
+        carbs_g: analysis.nutritionHighlights?.carbs_g ?? null,
+        sugar_g: analysis.nutritionHighlights?.sugar_g ?? null,
+        sodium_mg: analysis.nutritionHighlights?.sodium_mg ?? null
+      }
+    })
+    setStatus("Added to journal.")
+  }
+
+  const handleAddToJournal = () => {
+    if (caloriesPer100g === null) {
+      setStatus("Calories unknown. Try another image with visible nutrition.")
+      return
+    }
+    addJournalItem({
+      id: `${Date.now()}-${mealType}`,
+      date: new Date().toISOString().slice(0, 10),
+      mealType,
+      grams,
+      createdAt: new Date().toISOString(),
+      analysisSnapshot: analysis,
+      name: analysis.productName || "Scan item",
+      nutritionPer100g: {
+        id: "scan",
+        name: analysis.productName || "Scan item",
+        caloriesPer100g,
+        protein_g: analysis.nutritionHighlights?.protein_g ?? null,
+        carbs_g: analysis.nutritionHighlights?.carbs_g ?? null,
+        sugar_g: analysis.nutritionHighlights?.sugar_g ?? null,
+        sodium_mg: analysis.nutritionHighlights?.sodium_mg ?? null
+      }
+    })
+    setStatus("Added to journal.")
+  }
+
   return (
     <main className="container page-shell">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
@@ -129,6 +190,65 @@ export default function Results() {
           </div>
         </div>
       </div>
+
+      <section className="mt-4">
+        <div className="glass-card">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <div className="text-muted small">Suitability</div>
+                <div className="fw-semibold">
+                {analysis.suitability?.verdict === "good"
+                  ? "Good for you"
+                  : analysis.suitability?.verdict === "not_recommended"
+                    ? "Not recommended"
+                    : "Unknown"}
+                </div>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={handleEat}>
+              I am eating this
+            </button>
+          </div>
+          <div className="text-muted small mt-2">
+            {analysis.suitability?.reasons?.length
+              ? analysis.suitability.reasons.join(" ")
+              : "No additional notes."}
+          </div>
+          {status && <div className="text-muted small mt-2">{status}</div>}
+        </div>
+      </section>
+
+      <section className="mt-3">
+        <div className="glass-card">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <div className="fw-semibold">Add to Journal</div>
+            <span className="text-muted small">Choose meal + grams</span>
+          </div>
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            {(["breakfast", "lunch", "dinner", "snack"] as const).map((meal) => (
+              <button
+                key={meal}
+                className={`btn btn-sm ${mealType === meal ? "btn-primary" : "btn-outline-light"}`}
+                type="button"
+                onClick={() => setMealType(meal)}
+              >
+                {meal}
+              </button>
+            ))}
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Grams</label>
+            <input
+              className="form-control"
+              type="number"
+              value={grams}
+              onChange={(event) => setGrams(Number(event.target.value))}
+            />
+          </div>
+          <button className="btn btn-outline-light" onClick={handleAddToJournal}>
+            Add to Journal
+          </button>
+        </div>
+      </section>
 
       <section className="mt-4">
         <div className="d-flex justify-content-between align-items-center mb-2">

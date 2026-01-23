@@ -1,4 +1,28 @@
+import { useEffect, useState } from "react"
+import { getGoals, getJournalForDate } from "../lib/tracking"
+
 export default function Home() {
+  const [calories, setCalories] = useState<{
+    goal: number
+    consumed: number
+    remaining: number
+    status: "within" | "reached"
+  } | null>(null)
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const goals = getGoals()
+    const log = getJournalForDate(today)
+    const consumed = log.totals.calories
+    const remaining = Math.max(0, goals.caloriesTarget - consumed)
+    setCalories({
+      goal: goals.caloriesTarget,
+      consumed,
+      remaining,
+      status: remaining === 0 ? "reached" : "within"
+    })
+  }, [])
+
   return (
     <main className="container page-shell">
       <section className="hero fade-in">
@@ -51,23 +75,25 @@ export default function Home() {
       <section className="row g-3 mt-4 fade-in">
         <div className="col-md-4">
           <div className="metric-card h-100">
-            <div className="text-muted small">Scans this week</div>
-            <div className="metric-number">1,248</div>
-            <div className="metric-sub">Placeholder usage count</div>
+            <div className="text-muted small">Daily calorie goal</div>
+            <div className="metric-number">{calories?.goal ?? 2000}</div>
+            <div className="metric-sub">Auto-calculated from your profile</div>
           </div>
         </div>
         <div className="col-md-4">
           <div className="metric-card h-100">
-            <div className="text-muted small">Avg. label confidence</div>
-            <div className="metric-number">0.82</div>
-            <div className="metric-sub">OCR + parsing signal</div>
+            <div className="text-muted small">Calories consumed</div>
+            <div className="metric-number">{calories?.consumed ?? 0}</div>
+            <div className="metric-sub">Updated in real time</div>
           </div>
         </div>
         <div className="col-md-4">
           <div className="metric-card h-100">
-            <div className="text-muted small">Ingredients explained</div>
-            <div className="metric-number">60+</div>
-            <div className="metric-sub">Growing knowledge base</div>
+            <div className="text-muted small">Remaining today</div>
+            <div className="metric-number">{calories?.remaining ?? 2000}</div>
+            <div className="metric-sub">
+              {calories?.status === "reached" ? "Limit reached" : "Within your limit"}
+            </div>
           </div>
         </div>
       </section>

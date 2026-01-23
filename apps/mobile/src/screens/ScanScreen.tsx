@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { Camera, CameraType } from "expo-camera"
 import { runAnalyze, saveHistory } from "../api/client"
-import { defaultUserId } from "../api/config"
 import { useNavigation } from "@react-navigation/native"
 import { theme } from "../theme"
+import { getProfile, setLastAnalysis } from "../storage/cache"
 
 type ImageState = {
   label?: { uri: string; name: string; type: string }
@@ -54,17 +54,23 @@ export default function ScanScreen() {
     setStatus("Analyzing image...")
     const formData = new FormData()
     formData.append("frontImage", image.label as unknown as Blob)
-    formData.append("userId", defaultUserId)
+    const profile = await getProfile()
+    if (profile?.id) {
+      formData.append("userId", profile.id)
+    }
 
     try {
       const analysis = await runAnalyze(formData)
-      await saveHistory({
-        userId: defaultUserId,
-        extractedText: analysis.parsing.extractedText,
-        parsedIngredients: analysis.ingredientBreakdown.map((item) => item.name),
-        parsedNutrition: analysis.nutritionHighlights,
-        analysisSnapshot: analysis
-      })
+      await setLastAnalysis(analysis)
+      if (profile?.id) {
+        await saveHistory({
+          userId: profile.id,
+          extractedText: analysis.parsing.extractedText,
+          parsedIngredients: analysis.ingredientBreakdown.map((item) => item.name),
+          parsedNutrition: analysis.nutritionHighlights,
+          analysisSnapshot: analysis
+        })
+      }
 
       navigation.navigate("Results" as never, {
         analysis
@@ -107,6 +113,10 @@ export default function ScanScreen() {
           <Text style={styles.primaryActionText}>Analyze</Text>
         </Pressable>
       </View>
+
+      <Pressable style={styles.secondaryButton} onPress={() => setImage({})}>
+        <Text style={styles.secondaryButtonText}>Reupload image</Text>
+      </Pressable>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Captured</Text>
@@ -214,6 +224,17 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     color: "#02130c",
+    fontWeight: "700"
+  },
+  secondaryButton: {
+    backgroundColor: theme.colors.panel,
+    borderRadius: theme.radius.md,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 16
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
     fontWeight: "700"
   },
   section: {

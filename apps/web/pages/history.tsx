@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import { getHistory } from "@wimf/shared"
 import type { ScanHistory } from "@wimf/shared"
+import { getProfile, getToken } from "../lib/auth"
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000"
-const demoUser = process.env.NEXT_PUBLIC_DEMO_USER_ID || "demo-user-1"
 
 export default function History() {
   const [items, setItems] = useState<ScanHistory[]>([])
@@ -13,7 +13,13 @@ export default function History() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getHistory({ baseUrl: apiBase }, demoUser)
+        const profile = getProfile()
+        const token = getToken()
+        if (!profile || !token) {
+          setError("Please log in to view history.")
+          return
+        }
+        const data = await getHistory({ baseUrl: apiBase, token }, profile.id)
         setItems(data)
       } catch (err) {
         setError((err as Error).message)

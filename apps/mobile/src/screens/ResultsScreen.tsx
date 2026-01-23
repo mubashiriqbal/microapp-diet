@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native"
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput } from "react-native"
 import Svg, { Circle } from "react-native-svg"
 import type { AnalyzeFromImagesResponse } from "@wimf/shared"
 import { theme } from "../theme"
 import { getUserPrefs } from "../storage/cache"
 import type { UserPrefs } from "@wimf/shared"
+import { addJournalItem } from "../storage/tracking"
 
 type ResultsParams = {
   analysis: AnalyzeFromImagesResponse
@@ -75,6 +76,10 @@ export default function ResultsScreen({ route }: Props) {
   const [activeFlag, setActiveFlag] =
     useState<AnalyzeFromImagesResponse["personalizedFlags"][number] | null>(null)
   const [prefs, setPrefs] = useState<UserPrefs | null>(null)
+  const [status, setStatus] = useState("")
+  const [mealType, setMealType] =
+    useState<"breakfast" | "lunch" | "dinner" | "snack">("snack")
+  const [grams, setGrams] = useState("50")
   const scoreColor = useMemo(
     () => categoryColors[analysis.score.category] || theme.colors.text,
     [analysis.score.category]
@@ -103,6 +108,63 @@ export default function ResultsScreen({ route }: Props) {
     const average = values.reduce((sum, value) => sum + value, 0) / values.length
     return average.toFixed(2)
   }, [analysis.parsing.confidences])
+
+  const handleEat = async () => {
+    if (caloriesPer100g === null) {
+      setStatus("Calories unknown. Try another image.")
+      return
+    }
+    setStatus("Adding to daily intake...")
+    try {
+      await addJournalItem({
+        id: `${Date.now()}`,
+        date: new Date().toISOString().slice(0, 10),
+        mealType: "snack",
+        grams: 50,
+        createdAt: new Date().toISOString(),
+        analysisSnapshot: analysis,
+        name: analysis.productName || "Scan item",
+        nutritionPer100g: {
+          id: "scan",
+          name: analysis.productName || "Scan item",
+          caloriesPer100g,
+          protein_g: analysis.nutritionHighlights?.protein_g ?? null,
+          carbs_g: analysis.nutritionHighlights?.carbs_g ?? null,
+          sugar_g: analysis.nutritionHighlights?.sugar_g ?? null,
+          sodium_mg: analysis.nutritionHighlights?.sodium_mg ?? null
+        }
+      })
+      setStatus("Added to journal.")
+    } catch (error) {
+      setStatus((error as Error).message)
+    }
+  }
+
+  const handleAddToJournal = async () => {
+    if (caloriesPer100g === null) {
+      setStatus("Calories unknown. Try another image.")
+      return
+    }
+    await addJournalItem({
+      id: `${Date.now()}-${mealType}`,
+      date: new Date().toISOString().slice(0, 10),
+      mealType,
+      grams: Number(grams) || 50,
+      createdAt: new Date().toISOString(),
+      analysisSnapshot: analysis,
+      name: analysis.productName || "Scan item",
+      nutritionPer100g: {
+        id: "scan",
+        name: analysis.productName || "Scan item",
+        caloriesPer100g,
+        protein_g: analysis.nutritionHighlights?.protein_g ?? null,
+        carbs_g: analysis.nutritionHighlights?.carbs_g ?? null,
+        sugar_g: analysis.nutritionHighlights?.sugar_g ?? null,
+        sodium_mg: analysis.nutritionHighlights?.sodium_mg ?? null
+      }
+    })
+    setStatus("Added to journal.")
+  }
 
   useEffect(() => {
     const loadPrefs = async () => {
@@ -141,6 +203,51 @@ export default function ResultsScreen({ route }: Props) {
           <Text style={[styles.metricMeta, { color: scoreColor }]}>
             {analysis.score.category}
           </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.suitabilityCard}>
+          <Text style={styles.sectionTitle}>Suitability</Text>
+          <Text style={styles.suitabilityValue}>
+            {analysis.suitability?.verdict === "good"
+              ? "Good for you"
+              : analysis.suitability?.verdict === "not_recommended"
+                ? "Not recommended"
+                : "Unknown"}
+          </Text>
+          <Text style={styles.suitabilityMeta}>
+            {analysis.suitability?.reasons?.length
+              ? analysis.suitability.reasons.join(" ")
+              : "No additional notes."}
+          </Text>
+          <Pressable style={styles.primaryButton} onPress={handleEat}>
+            <Text style={styles.primaryButtonText}>I am eating this</Text>
+          </Pressable>
+          <View style={styles.mealRow}>
+            {(["breakfast", "lunch", "dinner", "snack"] as const).map((meal) => (
+              <Pressable
+                key={meal}
+                style={[styles.mealChip, mealType === meal ? styles.mealChipActive : null]}
+                onPress={() => setMealType(meal)}
+              >
+                <Text style={styles.mealChipText}>{meal}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.mealLabel}>Grams</Text>
+          <TextInput
+            style={styles.mealInput}
+            value={grams}
+            onChangeText={setGrams}
+            keyboardType="numeric"
+            placeholder="50"
+            placeholderTextColor={theme.colors.muted}
+          />
+          <Pressable style={styles.secondaryButton} onPress={handleAddToJournal}>
+            <Text style={styles.secondaryButtonText}>Add to Journal</Text>
+          </Pressable>
+          {status ? <Text style={styles.statusText}>{status}</Text> : null}
         </View>
       </View>
 
@@ -488,5 +595,79 @@ const styles = StyleSheet.create({
   modalText: {
     color: theme.colors.muted,
     marginBottom: 6
+  },
+  suitabilityCard: {
+    backgroundColor: theme.colors.panel,
+    padding: 16,
+    borderRadius: theme.radius.lg
+  },
+  suitabilityValue: {
+    color: theme.colors.text,
+    fontWeight: "700",
+    marginBottom: 6
+  },
+  suitabilityMeta: {
+    color: theme.colors.muted,
+    marginBottom: 12
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.accent,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    alignItems: "center"
+  },
+  primaryButtonText: {
+    color: "#02130c",
+    fontWeight: "700"
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.panelAlt,
+    paddingVertical: 10,
+    borderRadius: theme.radius.md,
+    alignItems: "center",
+    marginTop: 10
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
+    fontWeight: "700"
+  },
+  statusText: {
+    marginTop: 8,
+    color: theme.colors.muted
+  },
+  mealRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+    marginBottom: 8
+  },
+  mealChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.panelAlt,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    marginBottom: 6
+  },
+  mealChipActive: {
+    borderColor: theme.colors.accent2
+  },
+  mealChipText: {
+    color: theme.colors.text,
+    fontSize: 12
+  },
+  mealLabel: {
+    color: theme.colors.muted,
+    marginTop: 6
+  },
+  mealInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.panelAlt,
+    borderRadius: theme.radius.md,
+    padding: 10,
+    color: theme.colors.text,
+    marginBottom: 8
   }
 })

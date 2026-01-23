@@ -8,11 +8,27 @@ datasource db {
 }
 
 model User {
-  id        String        @id @default(cuid())
-  name      String?
-  createdAt DateTime      @default(now())
-  history   ScanHistory[]
-  prefs     UserPrefs?
+  id              String             @id @default(cuid())
+  fullName        String?
+  email           String             @unique
+  passwordHash    String
+  mobileNumber    String?
+  age             Int?
+  gender          Gender?
+  race            String?
+  dietaryPreference DietaryPreference?
+  heightCm        Float?
+  weightKg        Float?
+  activityLevel   ActivityLevel?
+  dailyCalorieGoal Int?
+  resetTokenHash  String?
+  resetTokenExpires DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  history         ScanHistory[]
+  prefs           UserPrefs?
+  conditions      MedicalCondition[]
+  calorieLogs     CalorieLog[]
 }
 
 model ScanHistory {
@@ -46,4 +62,60 @@ model UserPrefs {
   updatedAt           DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model MedicalCondition {
+  id        String   @id @default(cuid())
+  userId    String
+  type      ConditionType
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model CalorieLog {
+  id        String   @id @default(cuid())
+  userId    String
+  logDate   DateTime
+  calories  Float
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, logDate])
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum ActivityLevel {
+  sedentary
+  light
+  moderate
+  active
+}
+
+enum DietaryPreference {
+  halal
+  vegetarian
+  vegan
+  none
+}
+
+enum ConditionType {
+  diabetes
+  hypertension
+  heart_disease
+  high_cholesterol
+  celiac
+  allergy
+  kidney_disease
+  other
 }

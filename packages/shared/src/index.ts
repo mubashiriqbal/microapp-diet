@@ -42,6 +42,55 @@ export type UserPrefs = {
   sensitiveStomach?: boolean | null
 }
 
+export type Gender = "male" | "female" | "other"
+
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active"
+
+export type DietaryPreference = "halal" | "vegetarian" | "vegan" | "none"
+
+export type ConditionType =
+  | "diabetes"
+  | "hypertension"
+  | "heart_disease"
+  | "high_cholesterol"
+  | "celiac"
+  | "allergy"
+  | "kidney_disease"
+  | "other"
+
+export type MedicalCondition = {
+  id?: string
+  type: ConditionType
+  notes?: string | null
+}
+
+export type UserProfile = {
+  id: string
+  fullName?: string | null
+  email: string
+  mobileNumber?: string | null
+  age?: number | null
+  gender?: Gender | null
+  race?: string | null
+  dietaryPreference?: DietaryPreference | null
+  heightCm?: number | null
+  weightKg?: number | null
+  activityLevel?: ActivityLevel | null
+  dailyCalorieGoal?: number | null
+}
+
+export type CalorieSummary = {
+  goal: number
+  consumed: number
+  remaining: number
+  status: "within" | "reached"
+}
+
+export type SuitabilityResult = {
+  verdict: "good" | "not_recommended" | "unknown"
+  reasons: string[]
+}
+
 export type ScanHistory = {
   id: string
   userId: string
@@ -60,3 +109,4 @@ export * from "./flags"
 export * from "./analyze"
 export * from "./parser"
 export * from "./halal"
+export * from "./tracking"

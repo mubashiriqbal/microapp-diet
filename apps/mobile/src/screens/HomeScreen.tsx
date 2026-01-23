@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { useNavigation } from "@react-navigation/native"
+import { fetchTodayCalories } from "../api/client"
 import { getScanHistoryCache } from "../storage/cache"
 import { theme } from "../theme"
 
@@ -8,6 +9,12 @@ export default function HomeScreen() {
   const navigation = useNavigation()
   const [scanCount, setScanCount] = useState(0)
   const [lastScanLabel, setLastScanLabel] = useState("No scans yet")
+  const [calories, setCalories] = useState<{
+    goal: number
+    consumed: number
+    remaining: number
+    status: "within" | "reached"
+  } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -22,6 +29,18 @@ export default function HomeScreen() {
     load()
   }, [])
 
+  useEffect(() => {
+    const loadCalories = async () => {
+      try {
+        const summary = await fetchTodayCalories()
+        setCalories(summary)
+      } catch {
+        setCalories(null)
+      }
+    }
+    loadCalories()
+  }, [])
+
   return (
     <View style={styles.container}>
       <Text style={styles.kicker}>What's In My Food?</Text>
@@ -34,6 +53,17 @@ export default function HomeScreen() {
         <Text style={styles.cardLabel}>Today</Text>
         <Text style={styles.cardValue}>{scanCount}</Text>
         <Text style={styles.cardMeta}>Last scan: {lastScanLabel}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>Daily calories</Text>
+        <Text style={styles.cardValue}>{calories?.consumed ?? 0}</Text>
+        <Text style={styles.cardMeta}>
+          Goal {calories?.goal ?? 2000} • Remaining {calories?.remaining ?? 2000}
+        </Text>
+        <Text style={styles.cardMeta}>
+          {calories?.status === "reached" ? "Limit reached" : "Within your limit"}
+        </Text>
       </View>
 
       <Pressable

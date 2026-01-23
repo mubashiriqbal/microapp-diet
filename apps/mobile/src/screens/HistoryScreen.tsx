@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react"
 import { View, Text, StyleSheet, ScrollView } from "react-native"
 import { fetchHistory } from "../api/client"
-import { defaultUserId } from "../api/config"
-import { getScanHistoryCache, setScanHistoryCache } from "../storage/cache"
+import { getProfile, getScanHistoryCache, setScanHistoryCache } from "../storage/cache"
 import type { ScanHistory } from "@wimf/shared"
 import { theme } from "../theme"
 
@@ -19,7 +18,12 @@ export default function HistoryScreen() {
       }
 
       try {
-        const fresh = await fetchHistory(defaultUserId)
+        const profile = await getProfile()
+        if (!profile) {
+          setStatus("Please log in.")
+          return
+        }
+        const fresh = await fetchHistory(profile.id)
         setHistory(fresh)
         setScanHistoryCache(fresh)
         setStatus("Synced from API")

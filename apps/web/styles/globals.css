@@ -207,3 +207,31 @@ a {
     opacity: 1;
   }
 }
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: 14px 0;
+  background: rgba(11, 15, 18, 0.9);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+
+.app-logo {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-links {
+  gap: 16px;
+}
+
+.app-links a {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.app-links a:hover {
+  color: var(--text);
+}

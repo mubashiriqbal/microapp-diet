@@ -1,4 +1,10 @@
-import type { OCRExtraction, ParsedData, NutritionParsed, UserPrefs } from "./index"
+import type {
+  OCRExtraction,
+  ParsedData,
+  NutritionParsed,
+  SuitabilityResult,
+  UserPrefs
+} from "./index"
 import { findGlossaryMatch } from "./glossary"
 import { evaluateFlags } from "./flags"
 import { scoreFromParsed } from "./scoring"
@@ -22,6 +28,7 @@ export type AnalyzeFromImagesResponse = {
   halal: ReturnType<typeof classifyHalal>
   personalizedFlags: ReturnType<typeof evaluateFlags>
   ingredientBreakdown: IngredientBreakdown[]
+  suitability: SuitabilityResult
   parsing: {
     extractedText: OCRExtraction
     confidences: ParsedData["confidences"]
@@ -77,6 +84,10 @@ export function analyzeFromParsed(
     halal,
     personalizedFlags: evaluateFlags(parsed.ingredients, parsed.nutrition, prefs, halal),
     ingredientBreakdown: breakdown,
+    suitability: {
+      verdict: "unknown",
+      reasons: []
+    },
     parsing: {
       extractedText: extractedText || {
         ingredientsText: "",
