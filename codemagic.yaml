@@ -11,6 +11,11 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
+      - name: Link workspace node_modules
+        script: |
+          if [ ! -d "apps/mobile/node_modules" ]; then
+            ln -s ../../node_modules apps/mobile/node_modules
+          fi
       - name: Prebuild Android project
         script: |
           cd apps/mobile
