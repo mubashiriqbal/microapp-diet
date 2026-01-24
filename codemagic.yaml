@@ -1,0 +1,23 @@
+workflows:
+  android-debug:
+    name: Android Debug APK
+    max_build_duration: 60
+    environment:
+      node: 18.18.2
+      java: 17
+      vars:
+        EXPO_PUBLIC_API_BASE: "http://localhost:4000"
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install
+      - name: Prebuild Android project
+        script: |
+          cd apps/mobile
+          npx expo prebuild --platform android --clean
+      - name: Build debug APK
+        script: |
+          cd apps/mobile/android
+          ./gradlew assembleDebug
+    artifacts:
+      - apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
