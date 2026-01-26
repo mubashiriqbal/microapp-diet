@@ -9,7 +9,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `user` DROP COLUMN `name`,
+ALTER TABLE `User` DROP COLUMN `name`,
     ADD COLUMN `activityLevel` ENUM('sedentary', 'light', 'moderate', 'active') NULL,
     ADD COLUMN `age` INTEGER NULL,
     ADD COLUMN `dailyCalorieGoal` INTEGER NULL,

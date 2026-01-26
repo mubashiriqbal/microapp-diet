@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import type { CSSProperties } from "react"
 import { getPrefs } from "@wimf/shared"
 import type { AnalyzeFromImagesResponse, UserPrefs } from "@wimf/shared"
 import { getProfile, getToken } from "../lib/auth"
@@ -281,16 +282,20 @@ export default function Results() {
         {ringCards.map((ring) => {
           const hasData = ring.limit !== null && ring.value !== null && ring.value !== undefined
           const progress =
-            hasData && ring.limit ? Math.min(100, (ring.value / ring.limit) * 100) : 0
+            hasData && ring.limit
+              ? Math.min(100, ((ring.value ?? 0) / ring.limit) * 100)
+              : 0
+          const ringStyle = {
+            "--progress": progress,
+            "--ring-color": ring.color
+          } as CSSProperties
+
           return (
             <div className="col-md-4" key={ring.title}>
               <div className="metric-card h-100 text-center">
                 <div
                   className="progress-ring"
-                  style={{
-                    ["--progress" as const]: progress,
-                    ["--ring-color" as const]: ring.color
-                  }}
+                  style={ringStyle}
                 >
                   <div>
                     <div className="ring-value">{hasData ? Math.round(progress) : "--"}%</div>
