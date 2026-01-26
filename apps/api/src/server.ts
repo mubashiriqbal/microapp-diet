@@ -373,7 +373,7 @@ app.get("/conditions", requireAuth, async (req, res, next) => {
 app.put("/conditions", requireAuth, async (req, res, next) => {
   try {
     const payload = conditionsSchema.parse(req.body)
-    const userId = getAuthUserId(req)
+    const userId = getAuthUserId(req)!
 
     await prisma.medicalCondition.deleteMany({ where: { userId } })
     const created = await prisma.$transaction(
@@ -434,7 +434,7 @@ const caloriesConsumeSchema = z.object({
 app.post("/calories/consume", requireAuth, async (req, res, next) => {
   try {
     const payload = caloriesConsumeSchema.parse(req.body)
-    const userId = getAuthUserId(req)
+    const userId = getAuthUserId(req)!
     const logDate = new Date()
     logDate.setHours(0, 0, 0, 0)
 
@@ -795,11 +795,12 @@ const runVisionEstimate = async (buffer: Buffer, mimeType?: string) => {
   return buildVisionParsed(payload)
 }
 
-const buildVisionExtraction = (parsed: ParsedData): OCRExtraction => ({
-  ingredientsText: "AI Vision estimate (no label detected).",
-  nutritionText: "AI Vision estimate (no label detected).",
-  frontText: parsed.productName || "AI Vision estimate (no label detected)."
-})
+const buildVisionExtraction = (parsed: ParsedData) =>
+  ({
+    ingredientsText: "AI Vision estimate (no label detected).",
+    nutritionText: "AI Vision estimate (no label detected).",
+    frontText: parsed.productName || "AI Vision estimate (no label detected)."
+  } satisfies { ingredientsText: string; nutritionText: string; frontText: string })
 
 app.post(
   "/extract",
