@@ -171,8 +171,8 @@ function DrawerContent({ navigation }: { navigation: any }) {
     <DrawerContentScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 32, paddingBottom: 24 }}>
       <View style={{ marginBottom: 24 }}>
         <Image
-          source={require("./assets/icon.png")}
-          style={{ width: 72, height: 72, borderRadius: 18, marginBottom: 8 }}
+          source={require("./assets/drawer-logo.png")}
+          style={{ width: 140, height: 56, resizeMode: "contain", marginBottom: 8 }}
         />
       </View>
       <DrawerItem
