@@ -63,6 +63,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: theme.colors.text,
+    marginTop: theme.spacing.xl,
     marginBottom: 6,
     fontFamily: theme.font.heading
   },
