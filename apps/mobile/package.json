@@ -20,6 +20,7 @@
     "expo": "^49.0.17",
     "expo-camera": "~13.4.4",
     "expo-constants": "~14.4.2",
+    "expo-image-picker": "~14.3.2",
     "expo-notifications": "~0.20.1",
     "expo-status-bar": "~1.6.0",
     "react": "18.2.0",

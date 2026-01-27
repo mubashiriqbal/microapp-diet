@@ -8,11 +8,61 @@ const TOKEN_KEY = "wimf.token"
 const PROFILE_KEY = "wimf.profile"
 const LAST_ANALYSIS_KEY = "wimf.last_analysis"
 const HEALTH_PREFS_KEY = "wimf.health_prefs"
+const PROFILE_PREFS_KEY = "wimf.profile_prefs"
 const SCAN_IMAGE_KEY = "wimf.scan_images"
 
 type HealthPrefs = {
   restrictions: string[]
   allergens: string[]
+  allergyOther?: string
+}
+
+type ProfilePrefs = {
+  photoUri?: string | null
+  dob?: string | null
+  country?: string | null
+  dietary: Record<string, boolean>
+  allergies: Record<string, boolean>
+  allergyOther?: string
+  alerts: Record<string, boolean>
+  sensitivities: Record<string, boolean>
+  scoring: {
+    allergies: number
+    dietary: number
+    processing: number
+    strictMode: boolean
+  }
+}
+
+const defaultProfilePrefs: ProfilePrefs = {
+  photoUri: null,
+  dob: null,
+  country: null,
+  dietary: {},
+  allergies: {},
+  allergyOther: "",
+  alerts: {
+    highRisk: true,
+    allergenDetected: true,
+    nonCompliant: true,
+    processed: true,
+    highSodiumSugar: true,
+    push: true,
+    email: true,
+    sms: true
+  },
+  sensitivities: {
+    hypertension: false,
+    diabetic: false,
+    heartHealthy: false,
+    weightLoss: false
+  },
+  scoring: {
+    allergies: 70,
+    dietary: 60,
+    processing: 40,
+    strictMode: true
+  }
 }
 
 export async function getUserPrefs(): Promise<UserPrefs | null> {
@@ -89,6 +139,20 @@ export async function getHealthPrefs(): Promise<HealthPrefs> {
 
 export async function setHealthPrefs(prefs: HealthPrefs): Promise<void> {
   await AsyncStorage.setItem(HEALTH_PREFS_KEY, JSON.stringify(prefs))
+}
+
+export async function getProfilePrefs(): Promise<ProfilePrefs> {
+  const raw = await AsyncStorage.getItem(PROFILE_PREFS_KEY)
+  if (!raw) return defaultProfilePrefs
+  try {
+    return { ...defaultProfilePrefs, ...(JSON.parse(raw) as ProfilePrefs) }
+  } catch {
+    return defaultProfilePrefs
+  }
+}
+
+export async function setProfilePrefs(prefs: ProfilePrefs): Promise<void> {
+  await AsyncStorage.setItem(PROFILE_PREFS_KEY, JSON.stringify(prefs))
 }
 
 type ScanImageMap = Record<string, string>

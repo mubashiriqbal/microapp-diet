@@ -1,16 +1,19 @@
 import { useContext, useEffect, useState } from "react"
-import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView } from "react-native"
+import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView, Image } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { Picker } from "@react-native-picker/picker"
+import * as ImagePicker from "expo-image-picker"
 import * as Notifications from "expo-notifications"
 import { fetchPrefs, fetchProfile, saveProfile, updatePrefs } from "../api/client"
 import {
   clearAuth,
   getHealthPrefs,
   getProfile,
+  getProfilePrefs,
   getUserPrefs,
   setHealthPrefs,
   setProfile,
+  setProfilePrefs,
   setUserPrefs
 } from "../storage/cache"
 import type {
@@ -23,7 +26,6 @@ import type {
 } from "@wimf/shared"
 import { theme } from "../theme"
 import { AuthContext } from "../auth"
-import MultiSelect from "../components/MultiSelect"
 import {
   addActivity,
   addWeight,
@@ -59,30 +61,50 @@ const toNumberOrNull = (value: string) => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-const restrictionOptions = [
-  { value: "vegan", label: "Vegan", description: "Excludes all animal-derived foods." },
-  { value: "vegetarian", label: "Vegetarian", description: "No meat or fish; may include eggs/dairy." },
-  { value: "gluten_free", label: "Gluten-Free", description: "No wheat, barley, or rye." },
-  { value: "lactose_free", label: "Dairy-Free", description: "Avoids milk-based products." },
-  { value: "nut_allergy", label: "Nut Allergies", description: "Avoid peanuts and tree nuts." },
-  { value: "halal", label: "Halal", description: "Complies with Islamic dietary laws." },
-  { value: "kosher", label: "Kosher", description: "Complies with Jewish dietary laws." },
-  { value: "hindu", label: "Hindu", description: "Commonly restricts beef; some avoid all meat." },
-  { value: "keto", label: "Keto", description: "High fat, low carb." },
-  { value: "diabetic", label: "Diabetic", description: "Manages sugar and carbohydrates." },
-  { value: "low_sodium", label: "Low-Sodium / Low-Fat", description: "Used for cardiovascular health." }
+const dietaryToggles = [
+  { key: "halal", label: "Halal" },
+  { key: "kosher", label: "Kosher" },
+  { key: "vegetarian", label: "Vegetarian" },
+  { key: "vegan", label: "Vegan" },
+  { key: "pescatarian", label: "Pescatarian" },
+  { key: "keto", label: "Keto" },
+  { key: "low_carb", label: "Low Carb" },
+  { key: "low_sodium", label: "Low Sodium" },
+  { key: "low_sugar", label: "Low Sugar" },
+  { key: "high_protein", label: "High Protein" },
+  { key: "gluten_free", label: "Gluten-Free" },
+  { key: "dairy_free", label: "Dairy-Free" }
 ]
 
-const allergenOptions = [
-  { value: "milk", label: "Milk" },
-  { value: "eggs", label: "Eggs" },
-  { value: "peanuts", label: "Peanuts" },
-  { value: "tree_nuts", label: "Tree Nuts", description: "Almonds, walnuts, pecans, etc." },
-  { value: "fish", label: "Fish", description: "Salmon, cod, flounder, etc." },
-  { value: "shellfish", label: "Crustacean Shellfish", description: "Shrimp, crab, lobster." },
-  { value: "wheat", label: "Wheat" },
-  { value: "soy", label: "Soy" },
-  { value: "sesame", label: "Sesame", description: "Recognized as major allergen (2023)." }
+const allergyChecks = [
+  { key: "peanuts", label: "Peanuts" },
+  { key: "tree_nuts", label: "Tree Nuts" },
+  { key: "dairy", label: "Dairy" },
+  { key: "eggs", label: "Eggs" },
+  { key: "shellfish", label: "Shellfish" },
+  { key: "fish", label: "Fish" },
+  { key: "soy", label: "Soy" },
+  { key: "wheat_gluten", label: "Wheat / Gluten" },
+  { key: "sesame", label: "Sesame" },
+  { key: "sulfites", label: "Sulfites" }
+]
+
+const alertToggles = [
+  { key: "highRisk", label: "High-Risk Ingredients" },
+  { key: "allergenDetected", label: "Allergen Detected" },
+  { key: "nonCompliant", label: "Non-Compliant Food" },
+  { key: "processed", label: "Highly Processed Foods" },
+  { key: "highSodiumSugar", label: "High Sodium / Sugar" },
+  { key: "push", label: "Push Notifications" },
+  { key: "email", label: "Email Alerts" },
+  { key: "sms", label: "SMS Alerts" }
+]
+
+const sensitivityToggles = [
+  { key: "hypertension", label: "Hypertension-friendly" },
+  { key: "diabetic", label: "Diabetic-friendly" },
+  { key: "heartHealthy", label: "Heart-healthy" },
+  { key: "weightLoss", label: "Weight-loss focused" }
 ]
 
 export default function SettingsScreen() {
@@ -90,8 +112,31 @@ export default function SettingsScreen() {
   const [profile, setProfileState] = useState<UserProfile | null>(null)
   const [countryCode, setCountryCode] = useState("+1")
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [restrictions, setRestrictions] = useState<string[]>([])
-  const [allergens, setAllergens] = useState<string[]>([])
+  const [profilePrefs, setProfilePrefsState] = useState({
+    photoUri: null,
+    dob: "",
+    country: "",
+    dietary: {},
+    allergies: {},
+    allergyOther: "",
+    alerts: {
+      highRisk: true,
+      allergenDetected: true,
+      nonCompliant: true,
+      processed: true,
+      highSodiumSugar: true,
+      push: true,
+      email: true,
+      sms: true
+    },
+    sensitivities: {
+      hypertension: false,
+      diabetic: false,
+      heartHealthy: false,
+      weightLoss: false
+    },
+    scoring: { allergies: 70, dietary: 60, processing: 40, strictMode: true }
+  })
   const [prefs, setPrefs] = useState<UserPrefs>(emptyPrefs)
   const [goals, setGoalsState] = useState<TrackingGoals>({
     caloriesTarget: 2000,
@@ -109,6 +154,51 @@ export default function SettingsScreen() {
   const [activities, setActivitiesState] = useState<ActivityEntry[]>([])
   const [activityInput, setActivityInput] = useState("")
   const [status, setStatus] = useState("")
+
+  const setDietaryToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      dietary: { ...prev.dietary, [key]: value }
+    }))
+  }
+
+  const setAllergyToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      allergies: { ...prev.allergies, [key]: value }
+    }))
+  }
+
+  const setAlertToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      alerts: { ...prev.alerts, [key]: value }
+    }))
+  }
+
+  const setSensitivityToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      sensitivities: { ...prev.sensitivities, [key]: value }
+    }))
+  }
+
+  const setScoringValue = (key: "allergies" | "dietary" | "processing", value: number) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      scoring: { ...prev.scoring, [key]: value }
+    }))
+  }
+
+  const pickPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8
+    })
+    if (!result.canceled && result.assets.length > 0) {
+      setProfilePrefsState((prev) => ({ ...prev, photoUri: result.assets[0].uri }))
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -166,8 +256,20 @@ export default function SettingsScreen() {
       setActivitiesState(storedActivities)
 
       const storedHealth = await getHealthPrefs()
-      setRestrictions(storedHealth.restrictions)
-      setAllergens(storedHealth.allergens)
+      const storedProfilePrefs = await getProfilePrefs()
+      setProfilePrefsState((prev) => ({
+        ...prev,
+        ...storedProfilePrefs,
+        allergyOther: storedProfilePrefs.allergyOther ?? storedHealth.allergyOther ?? "",
+        dietary: {
+          ...storedProfilePrefs.dietary,
+          ...Object.fromEntries(storedHealth.restrictions.map((item) => [item, true]))
+        },
+        allergies: {
+          ...storedProfilePrefs.allergies,
+          ...Object.fromEntries(storedHealth.allergens.map((item) => [item, true]))
+        }
+      }))
     }
 
     load()
@@ -181,14 +283,42 @@ export default function SettingsScreen() {
         setProfileState(savedProfile)
         await setProfile(savedProfile)
       }
-      const saved = await updatePrefs(prefs)
+      const nextPrefs = {
+        ...prefs,
+        halalCheckEnabled: !!profilePrefs.dietary?.halal,
+        vegetarian: !!profilePrefs.dietary?.vegetarian,
+        vegan: !!profilePrefs.dietary?.vegan
+      }
+      const saved = await updatePrefs(nextPrefs)
+      setPrefs(saved)
       await setUserPrefs(saved)
-      await setHealthPrefs({ restrictions, allergens })
+      const restrictions = Object.entries(profilePrefs.dietary || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+      const allergens = Object.entries(profilePrefs.allergies || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+      await setHealthPrefs({ restrictions, allergens, allergyOther: profilePrefs.allergyOther || "" })
+      await setProfilePrefs(profilePrefs)
       setStatus("Saved")
     } catch {
       setStatus("Saved locally.")
-      await setUserPrefs(prefs)
-      await setHealthPrefs({ restrictions, allergens })
+      const nextPrefs = {
+        ...prefs,
+        halalCheckEnabled: !!profilePrefs.dietary?.halal,
+        vegetarian: !!profilePrefs.dietary?.vegetarian,
+        vegan: !!profilePrefs.dietary?.vegan
+      }
+      setPrefs(nextPrefs)
+      await setUserPrefs(nextPrefs)
+      const restrictions = Object.entries(profilePrefs.dietary || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+      const allergens = Object.entries(profilePrefs.allergies || {})
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+      await setHealthPrefs({ restrictions, allergens, allergyOther: profilePrefs.allergyOther || "" })
+      await setProfilePrefs(profilePrefs)
     }
   }
 
@@ -301,12 +431,25 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Profile & preferences</Text>
-      <Text style={styles.subtitle}>Personalize scans and calorie goals.</Text>
+      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.subtitle}>Manage your preferences and alerts.</Text>
 
       {profile && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Profile</Text>
+          <Text style={styles.sectionTitle}>Personal information</Text>
+          <View style={styles.photoRow}>
+            <View style={styles.photoPlaceholder}>
+              {profilePrefs.photoUri ? (
+                <Image source={{ uri: profilePrefs.photoUri }} style={styles.photoImage} />
+              ) : (
+                <Ionicons name="person-circle-outline" size={52} color={theme.colors.muted} />
+              )}
+            </View>
+            <Pressable style={styles.photoButton} onPress={pickPhoto}>
+              <Ionicons name="image-outline" size={16} color="#ffffff" />
+              <Text style={styles.photoButtonText}>Upload photo</Text>
+            </Pressable>
+          </View>
           <Text style={styles.label}>Full name</Text>
           <TextInput
             style={styles.input}
@@ -351,6 +494,22 @@ export default function SettingsScreen() {
               })
             }
             placeholder="Age"
+            placeholderTextColor={theme.colors.muted}
+          />
+          <Text style={styles.label}>Date of birth</Text>
+          <TextInput
+            style={styles.input}
+            value={profilePrefs.dob ?? ""}
+            onChangeText={(value) => setProfilePrefsState((prev) => ({ ...prev, dob: value }))}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={theme.colors.muted}
+          />
+          <Text style={styles.label}>Country</Text>
+          <TextInput
+            style={styles.input}
+            value={profilePrefs.country ?? ""}
+            onChangeText={(value) => setProfilePrefsState((prev) => ({ ...prev, country: value }))}
+            placeholder="Country"
             placeholderTextColor={theme.colors.muted}
           />
           <Text style={styles.label}>Height (cm)</Text>
@@ -410,44 +569,47 @@ export default function SettingsScreen() {
             </Picker>
           </View>
 
-          <Text style={styles.label}>Dietary preference (halal/vegetarian/vegan/none)</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.dietaryPreference ?? "none"}
-            onChangeText={(value) =>
-              setProfileState({
-                ...profile,
-                dietaryPreference: value as UserProfile["dietaryPreference"]
-              })
-            }
-            placeholder="halal"
-            placeholderTextColor={theme.colors.muted}
-          />
-
           <Text style={styles.label}>Daily calorie goal</Text>
           <Text style={styles.readonly}>{profile.dailyCalorieGoal ?? 2000} kcal</Text>
         </View>
       )}
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Common dietary restrictions</Text>
-        <MultiSelect
-          label="Select restrictions"
-          options={restrictionOptions}
-          selected={restrictions}
-          onChange={setRestrictions}
-          placeholder="Search dietary restrictions"
-        />
+        <Text style={styles.sectionTitle}>Dietary restrictions</Text>
+        {dietaryToggles.map((item) => (
+          <View key={item.key} style={styles.switchRow}>
+            <Text style={styles.label}>{item.label}</Text>
+            <Switch
+              value={!!profilePrefs.dietary?.[item.key]}
+              onValueChange={(value) => setDietaryToggle(item.key, value)}
+            />
+          </View>
+        ))}
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Allergens</Text>
-        <MultiSelect
-          label="Select allergens"
-          options={allergenOptions}
-          selected={allergens}
-          onChange={setAllergens}
-          placeholder="Search allergens"
+        <Text style={styles.sectionTitle}>Allergies & intolerances</Text>
+        {allergyChecks.map((item) => (
+          <Pressable
+            key={item.key}
+            style={styles.checkRow}
+            onPress={() => setAllergyToggle(item.key, !profilePrefs.allergies?.[item.key])}
+          >
+            <Ionicons
+              name={profilePrefs.allergies?.[item.key] ? "checkbox" : "square-outline"}
+              size={20}
+              color={profilePrefs.allergies?.[item.key] ? theme.colors.danger : theme.colors.muted}
+            />
+            <Text style={styles.checkLabel}>{item.label}</Text>
+          </Pressable>
+        ))}
+        <Text style={styles.label}>Other (custom)</Text>
+        <TextInput
+          style={styles.input}
+          value={profilePrefs.allergyOther ?? ""}
+          onChangeText={(value) => setProfilePrefsState((prev) => ({ ...prev, allergyOther: value }))}
+          placeholder="Add custom allergy"
+          placeholderTextColor={theme.colors.muted}
         />
       </View>
 
@@ -585,36 +747,65 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Enable halal check</Text>
-          <Switch
-            value={prefs.halalCheckEnabled}
-            onValueChange={(value) => setPrefs((prev) => ({ ...prev, halalCheckEnabled: value }))}
-          />
-        </View>
+        <Text style={styles.sectionTitle}>Alert preferences</Text>
+        {alertToggles.map((item) => (
+          <View key={item.key} style={styles.switchRow}>
+            <Text style={styles.label}>{item.label}</Text>
+            <Switch
+              value={!!profilePrefs.alerts?.[item.key]}
+              onValueChange={(value) => setAlertToggle(item.key, value)}
+            />
+          </View>
+        ))}
+      </View>
 
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Vegetarian</Text>
-          <Switch
-            value={!!prefs.vegetarian}
-            onValueChange={(value) => setPrefs((prev) => ({ ...prev, vegetarian: value }))}
-          />
-        </View>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Health sensitivities</Text>
+        {sensitivityToggles.map((item) => (
+          <View key={item.key} style={styles.switchRow}>
+            <Text style={styles.label}>{item.label}</Text>
+            <Switch
+              value={!!profilePrefs.sensitivities?.[item.key]}
+              onValueChange={(value) => setSensitivityToggle(item.key, value)}
+            />
+          </View>
+        ))}
+        <Text style={styles.bodyMuted}>This app does not provide medical advice.</Text>
+      </View>
 
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Scoring preferences</Text>
+        <Text style={styles.label}>Prioritize allergies</Text>
+        <TextInput
+          style={styles.input}
+          value={profilePrefs.scoring.allergies.toString()}
+          onChangeText={(value) => setScoringValue("allergies", Number(value) || 0)}
+          keyboardType="numeric"
+        />
+        <Text style={styles.label}>Prioritize dietary rules</Text>
+        <TextInput
+          style={styles.input}
+          value={profilePrefs.scoring.dietary.toString()}
+          onChangeText={(value) => setScoringValue("dietary", Number(value) || 0)}
+          keyboardType="numeric"
+        />
+        <Text style={styles.label}>Prioritize processing level</Text>
+        <TextInput
+          style={styles.input}
+          value={profilePrefs.scoring.processing.toString()}
+          onChangeText={(value) => setScoringValue("processing", Number(value) || 0)}
+          keyboardType="numeric"
+        />
         <View style={styles.switchRow}>
-          <Text style={styles.label}>Vegan</Text>
+          <Text style={styles.label}>Strict mode</Text>
           <Switch
-            value={!!prefs.vegan}
-            onValueChange={(value) => setPrefs((prev) => ({ ...prev, vegan: value }))}
-          />
-        </View>
-
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Sensitive stomach</Text>
-          <Switch
-            value={!!prefs.sensitiveStomach}
-            onValueChange={(value) => setPrefs((prev) => ({ ...prev, sensitiveStomach: value }))}
+            value={profilePrefs.scoring.strictMode}
+            onValueChange={(value) =>
+              setProfilePrefsState((prev) => ({
+                ...prev,
+                scoring: { ...prev.scoring, strictMode: value }
+              }))
+            }
           />
         </View>
       </View>
@@ -647,6 +838,41 @@ const styles = StyleSheet.create({
   subtitle: {
     color: theme.colors.muted,
     marginBottom: theme.spacing.md
+  },
+  photoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16
+  },
+  photoPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 999,
+    backgroundColor: theme.colors.glassStrong,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden"
+  },
+  photoImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover"
+  },
+  photoButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.accent2,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999
+  },
+  photoButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
   },
   card: {
     backgroundColor: theme.colors.glass,
@@ -734,6 +960,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16
   },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8
+  },
+  checkLabel: {
+    color: theme.colors.text,
+    fontWeight: "600"
+  },
   reminderHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -792,6 +1028,11 @@ const styles = StyleSheet.create({
   reminderChipText: {
     color: theme.colors.text,
     fontSize: 12
+  },
+  bodyMuted: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    marginTop: 8
   },
   primaryButton: {
     backgroundColor: theme.colors.accent,

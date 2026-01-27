@@ -8,8 +8,8 @@ import {
 } from "@wimf/shared"
 import type { UserPrefs, UserProfile } from "@wimf/shared"
 import { getToken } from "../lib/auth"
-import MultiSelect from "../components/MultiSelect"
 import { getHealthPrefs, setHealthPrefs } from "../lib/healthPrefs"
+import { getProfilePrefs, setProfilePrefs } from "../lib/profilePrefs"
 import {
   addActivity,
   addWeight,
@@ -52,8 +52,7 @@ export default function Settings() {
   const [token, setToken] = useState<string | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [prefs, setPrefs] = useState<UserPrefs>(emptyPrefs)
-  const [restrictions, setRestrictions] = useState<string[]>([])
-  const [allergens, setAllergens] = useState<string[]>([])
+  const [profilePrefs, setProfilePrefsState] = useState(getProfilePrefs())
   const [goals, setGoalsState] = useState(getGoals())
   const [plans, setPlansState] = useState(getPlans())
   const [activePlanId, setActivePlanIdState] = useState(getActivePlanId())
@@ -87,8 +86,19 @@ export default function Settings() {
           setPrefs({ ...prefsData })
         }
         const storedHealth = getHealthPrefs()
-        setRestrictions(storedHealth.restrictions)
-        setAllergens(storedHealth.allergens)
+        const storedProfilePrefs = getProfilePrefs()
+        setProfilePrefsState({
+          ...storedProfilePrefs,
+          allergyOther: storedProfilePrefs.allergyOther || storedHealth.allergyOther || "",
+          dietary: {
+            ...storedProfilePrefs.dietary,
+            ...Object.fromEntries(storedHealth.restrictions.map((item) => [item, true]))
+          },
+          allergies: {
+            ...storedProfilePrefs.allergies,
+            ...Object.fromEntries(storedHealth.allergens.map((item) => [item, true]))
+          }
+        })
       } catch {
         setStatus("Unable to load profile.")
       }
@@ -97,30 +107,50 @@ export default function Settings() {
     load()
   }, [token])
 
-  const restrictionOptions = [
-    { value: "vegan", label: "Vegan", description: "Excludes all animal-derived foods." },
-    { value: "vegetarian", label: "Vegetarian", description: "No meat or fish; may include eggs/dairy." },
-    { value: "gluten_free", label: "Gluten-Free", description: "No wheat, barley, or rye." },
-    { value: "lactose_free", label: "Dairy-Free", description: "Avoids milk-based products." },
-    { value: "nut_allergy", label: "Nut Allergies", description: "Avoid peanuts and tree nuts." },
-    { value: "halal", label: "Halal", description: "Complies with Islamic dietary laws." },
-    { value: "kosher", label: "Kosher", description: "Complies with Jewish dietary laws." },
-    { value: "hindu", label: "Hindu", description: "Commonly restricts beef; some avoid all meat." },
-    { value: "keto", label: "Keto", description: "High fat, low carb." },
-    { value: "diabetic", label: "Diabetic", description: "Manages sugar and carbohydrates." },
-    { value: "low_sodium", label: "Low-Sodium / Low-Fat", description: "Used for cardiovascular health." }
+  const dietaryToggles = [
+    { key: "halal", label: "Halal" },
+    { key: "kosher", label: "Kosher" },
+    { key: "vegetarian", label: "Vegetarian" },
+    { key: "vegan", label: "Vegan" },
+    { key: "pescatarian", label: "Pescatarian" },
+    { key: "keto", label: "Keto" },
+    { key: "low_carb", label: "Low Carb" },
+    { key: "low_sodium", label: "Low Sodium" },
+    { key: "low_sugar", label: "Low Sugar" },
+    { key: "high_protein", label: "High Protein" },
+    { key: "gluten_free", label: "Gluten-Free" },
+    { key: "dairy_free", label: "Dairy-Free" }
   ]
 
-  const allergenOptions = [
-    { value: "milk", label: "Milk" },
-    { value: "eggs", label: "Eggs" },
-    { value: "peanuts", label: "Peanuts" },
-    { value: "tree_nuts", label: "Tree Nuts", description: "Almonds, walnuts, pecans, etc." },
-    { value: "fish", label: "Fish", description: "Salmon, cod, flounder, etc." },
-    { value: "shellfish", label: "Crustacean Shellfish", description: "Shrimp, crab, lobster." },
-    { value: "wheat", label: "Wheat" },
-    { value: "soy", label: "Soy" },
-    { value: "sesame", label: "Sesame", description: "Recognized as major allergen (2023)." }
+  const allergyChecks = [
+    { key: "peanuts", label: "Peanuts" },
+    { key: "tree_nuts", label: "Tree Nuts" },
+    { key: "dairy", label: "Dairy" },
+    { key: "eggs", label: "Eggs" },
+    { key: "shellfish", label: "Shellfish" },
+    { key: "fish", label: "Fish" },
+    { key: "soy", label: "Soy" },
+    { key: "wheat_gluten", label: "Wheat / Gluten" },
+    { key: "sesame", label: "Sesame" },
+    { key: "sulfites", label: "Sulfites" }
+  ]
+
+  const alertToggles = [
+    { key: "highRisk", label: "High-Risk Ingredients" },
+    { key: "allergenDetected", label: "Allergen Detected" },
+    { key: "nonCompliant", label: "Non-Compliant Food (e.g. not Halal)" },
+    { key: "processed", label: "Highly Processed Foods" },
+    { key: "highSodiumSugar", label: "High Sodium / Sugar" },
+    { key: "push", label: "Push Notifications" },
+    { key: "email", label: "Email Alerts" },
+    { key: "sms", label: "SMS Alerts" }
+  ]
+
+  const sensitivityToggles = [
+    { key: "hypertension", label: "Hypertension-friendly" },
+    { key: "diabetic", label: "Diabetic-friendly" },
+    { key: "heartHealthy", label: "Heart-healthy" },
+    { key: "weightLoss", label: "Weight-loss focused" }
   ]
 
   const handleProfileSave = async () => {
@@ -139,7 +169,14 @@ export default function Settings() {
     if (!token || !profile) return
     setStatus("Saving preferences...")
     try {
-      const saved = await savePrefs({ baseUrl: apiBase, token }, { ...prefs, userId: profile.id })
+      const nextPrefs = {
+        ...prefs,
+        userId: profile.id,
+        halalCheckEnabled: !!profilePrefs.dietary?.halal,
+        vegetarian: !!profilePrefs.dietary?.vegetarian,
+        vegan: !!profilePrefs.dietary?.vegan
+      }
+      const saved = await savePrefs({ baseUrl: apiBase, token }, nextPrefs)
       setPrefs(saved)
       setStatus("Preferences saved.")
     } catch (error) {
@@ -212,9 +249,60 @@ export default function Settings() {
     setStatus("Activity logged.")
   }
 
+  const setDietaryToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      dietary: { ...prev.dietary, [key]: value }
+    }))
+  }
+
+  const setAllergyToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      allergies: { ...prev.allergies, [key]: value }
+    }))
+  }
+
+  const setAlertToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      alerts: { ...prev.alerts, [key]: value }
+    }))
+  }
+
+  const setSensitivityToggle = (key: string, value: boolean) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      sensitivities: { ...prev.sensitivities, [key]: value }
+    }))
+  }
+
+  const setScoringValue = (key: "allergies" | "dietary" | "processing", value: number) => {
+    setProfilePrefsState((prev) => ({
+      ...prev,
+      scoring: { ...prev.scoring, [key]: value }
+    }))
+  }
+
+  const handlePhoto = (file: File | null) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setProfilePrefsState((prev) => ({ ...prev, photoUri: reader.result as string }))
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleHealthSave = () => {
-    setHealthPrefs({ restrictions, allergens })
-    setStatus("Health preferences saved locally.")
+    const restrictions = Object.entries(profilePrefs.dietary || {})
+      .filter(([, value]) => value)
+      .map(([key]) => key)
+    const allergens = Object.entries(profilePrefs.allergies || {})
+      .filter(([, value]) => value)
+      .map(([key]) => key)
+    setHealthPrefs({ restrictions, allergens, allergyOther: profilePrefs.allergyOther || "" })
+    setProfilePrefs(profilePrefs)
+    setStatus("Profile preferences saved locally.")
   }
 
   if (!profile) {
@@ -229,16 +317,34 @@ export default function Settings() {
     <main className="container page-shell">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
-          <h1 className="mb-1">Profile & preferences</h1>
-          <div className="text-muted">Keep your data updated for better personalization.</div>
+          <h1 className="mb-1">Profile</h1>
+          <div className="text-muted">Manage your preferences and alerts.</div>
         </div>
-        <span className="chip">Account</span>
+        <span className="chip">SafePlate AI</span>
       </div>
 
       <div className="row g-3">
         <div className="col-lg-7">
           <div className="glass-card mb-3">
-            <h2 className="h5 mb-3">Profile</h2>
+            <h2 className="h5 mb-3">Personal information</h2>
+            <div className="d-flex align-items-center gap-3 mb-3">
+              <div
+                className="rounded-circle border d-flex align-items-center justify-content-center"
+                style={{ width: 64, height: 64, overflow: "hidden" }}
+              >
+                {profilePrefs.photoUri ? (
+                  <img src={profilePrefs.photoUri} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span className="text-muted small">Photo</span>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="form-control"
+                onChange={(event) => handlePhoto(event.target.files?.[0] || null)}
+              />
+            </div>
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="form-label">Full name</label>
@@ -271,6 +377,27 @@ export default function Settings() {
                     setProfile((prev) =>
                       prev ? { ...prev, age: toNumberOrNull(event.target.value) ?? undefined } : prev
                     )
+                  }
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Date of birth</label>
+                <input
+                  className="form-control"
+                  value={profilePrefs.dob ?? ""}
+                  onChange={(event) =>
+                    setProfilePrefsState((prev) => ({ ...prev, dob: event.target.value }))
+                  }
+                  placeholder="YYYY-MM-DD"
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Country</label>
+                <input
+                  className="form-control"
+                  value={profilePrefs.country ?? ""}
+                  onChange={(event) =>
+                    setProfilePrefsState((prev) => ({ ...prev, country: event.target.value }))
                   }
                 />
               </div>
@@ -381,89 +508,146 @@ export default function Settings() {
           </div>
 
           <div className="glass-card mb-3">
-            <h2 className="h5 mb-3">Common dietary restrictions</h2>
-            <MultiSelect
-              label="Select restrictions"
-              options={restrictionOptions}
-              selected={restrictions}
-              onChange={setRestrictions}
-              placeholder="Search dietary restrictions"
-            />
+            <h2 className="h5 mb-3">Dietary restrictions</h2>
+            <div className="row g-2">
+              {dietaryToggles.map((item) => (
+                <div className="col-md-6" key={item.key}>
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={!!profilePrefs.dietary?.[item.key]}
+                      onChange={(event) => setDietaryToggle(item.key, event.target.checked)}
+                    />
+                    <label className="form-check-label">{item.label}</label>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="glass-card mb-3">
-            <h2 className="h5 mb-3">Allergens</h2>
-            <MultiSelect
-              label="Select allergens"
-              options={allergenOptions}
-              selected={allergens}
-              onChange={setAllergens}
-              placeholder="Search allergens"
+            <h2 className="h5 mb-3">Allergies & intolerances</h2>
+            <div className="row g-2">
+              {allergyChecks.map((item) => (
+                <div className="col-md-6" key={item.key}>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={!!profilePrefs.allergies?.[item.key]}
+                      onChange={(event) => setAllergyToggle(item.key, event.target.checked)}
+                    />
+                    <label className="form-check-label">{item.label}</label>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <label className="form-label mt-3">Other (custom)</label>
+            <input
+              className="form-control"
+              value={profilePrefs.allergyOther ?? ""}
+              onChange={(event) =>
+                setProfilePrefsState((prev) => ({ ...prev, allergyOther: event.target.value }))
+              }
             />
-            <button className="btn btn-primary mt-2" onClick={handleHealthSave}>
-              Save health preferences
+            <button className="btn btn-primary mt-3" onClick={handleHealthSave}>
+              Save profile preferences
             </button>
           </div>
 
           <div className="glass-card">
-            <h2 className="h5 mb-3">Personalized flags</h2>
-            <div className="form-check form-switch mb-3">
+            <h2 className="h5 mb-3">Alert preferences</h2>
+            <div className="row g-2">
+              {alertToggles.map((item) => (
+                <div className="col-md-6" key={item.key}>
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={!!profilePrefs.alerts?.[item.key]}
+                      onChange={(event) => setAlertToggle(item.key, event.target.checked)}
+                    />
+                    <label className="form-check-label">{item.label}</label>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="btn btn-primary mt-3" onClick={handlePrefsSave}>
+              Save preferences
+            </button>
+          </div>
+
+          <div className="glass-card mt-3">
+            <h2 className="h5 mb-3">Health sensitivities</h2>
+            <div className="row g-2">
+              {sensitivityToggles.map((item) => (
+                <div className="col-md-6" key={item.key}>
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={!!profilePrefs.sensitivities?.[item.key]}
+                      onChange={(event) => setSensitivityToggle(item.key, event.target.checked)}
+                    />
+                    <label className="form-check-label">{item.label}</label>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-muted small mt-2">
+              This app does not provide medical advice.
+            </div>
+          </div>
+
+          <div className="glass-card mt-3">
+            <h2 className="h5 mb-3">Scoring preferences</h2>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <label className="form-label">Prioritize allergies</label>
+                <input
+                  className="form-control"
+                  value={profilePrefs.scoring.allergies}
+                  onChange={(event) =>
+                    setScoringValue("allergies", Number(event.target.value) || 0)
+                  }
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Prioritize dietary rules</label>
+                <input
+                  className="form-control"
+                  value={profilePrefs.scoring.dietary}
+                  onChange={(event) =>
+                    setScoringValue("dietary", Number(event.target.value) || 0)
+                  }
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Prioritize processing</label>
+                <input
+                  className="form-control"
+                  value={profilePrefs.scoring.processing}
+                  onChange={(event) =>
+                    setScoringValue("processing", Number(event.target.value) || 0)
+                  }
+                />
+              </div>
+            </div>
+            <div className="form-check form-switch mt-3">
               <input
                 className="form-check-input"
                 type="checkbox"
-                checked={prefs.halalCheckEnabled}
+                checked={profilePrefs.scoring.strictMode}
                 onChange={(event) =>
-                  setPrefs((prev) => ({ ...prev, halalCheckEnabled: event.target.checked }))
+                  setProfilePrefsState((prev) => ({
+                    ...prev,
+                    scoring: { ...prev.scoring, strictMode: event.target.checked }
+                  }))
                 }
               />
-              <label className="form-check-label">Enable halal check</label>
+              <label className="form-check-label">Strict mode</label>
             </div>
-
-            <div className="row g-3 mt-1">
-              <div className="col-md-4">
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={!!prefs.vegetarian}
-                    onChange={(event) =>
-                      setPrefs((prev) => ({ ...prev, vegetarian: event.target.checked }))
-                    }
-                  />
-                  <label className="form-check-label">Vegetarian</label>
-                </div>
-              </div>
-              <div className="col-md-4">
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={!!prefs.vegan}
-                    onChange={(event) =>
-                      setPrefs((prev) => ({ ...prev, vegan: event.target.checked }))
-                    }
-                  />
-                  <label className="form-check-label">Vegan</label>
-                </div>
-              </div>
-              <div className="col-md-4">
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={!!prefs.sensitiveStomach}
-                    onChange={(event) =>
-                      setPrefs((prev) => ({ ...prev, sensitiveStomach: event.target.checked }))
-                    }
-                  />
-                  <label className="form-check-label">Sensitive stomach</label>
-                </div>
-              </div>
-            </div>
-
-            <button className="btn btn-primary mt-4" onClick={handlePrefsSave}>
-              Save preferences
-            </button>
           </div>
 
           <div className="glass-card mt-3">

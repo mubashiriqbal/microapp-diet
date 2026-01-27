@@ -3,6 +3,7 @@ const KEY = "wimf.health_prefs"
 export type HealthPrefs = {
   restrictions: string[]
   allergens: string[]
+  allergyOther?: string
 }
 
 export const getHealthPrefs = (): HealthPrefs => {

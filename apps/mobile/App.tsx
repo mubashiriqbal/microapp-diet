@@ -41,7 +41,7 @@ const tabConfig: Array<{
   { name: "Scan", label: "Scan", icon: "camera-outline" },
   { name: "Journal", label: "Journal", icon: "book-outline" },
   { name: "History", label: "History", icon: "time-outline" },
-  { name: "Settings", label: "Settings", icon: "settings-outline" }
+  { name: "Settings", label: "Profile", icon: "settings-outline" }
 ]
 
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -273,7 +273,7 @@ function DrawerContent({ navigation }: { navigation: any }) {
         icon={({ color, size }) => <Ionicons name="time-outline" color={color} size={size} />}
       />
       <DrawerItem
-        label="Settings"
+        label="Profile"
         onPress={() => navigation.navigate("MainTabs", { screen: "Settings" })}
         icon={({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />}
       />

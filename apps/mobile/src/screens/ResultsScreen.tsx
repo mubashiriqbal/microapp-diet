@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type { AnalyzeFromImagesResponse, UserPrefs } from "@wimf/shared"
 import { theme } from "../theme"
-import { getHealthPrefs, getUserPrefs } from "../storage/cache"
+import { getHealthPrefs, getProfilePrefs, getUserPrefs } from "../storage/cache"
 
 type ResultsParams = {
   analysis: AnalyzeFromImagesResponse
@@ -104,6 +104,11 @@ export default function ResultsScreen({ route }: Props) {
   const insets = useSafeAreaInsets()
   const [prefs, setPrefs] = useState<UserPrefs | null>(null)
   const [healthPrefs, setHealthPrefs] = useState({ restrictions: [], allergens: [] as string[] })
+  const [profilePrefs, setProfilePrefs] = useState({
+    dietary: {} as Record<string, boolean>,
+    allergies: {} as Record<string, boolean>,
+    allergyOther: ""
+  })
   const scoreColor = useMemo(
     () => categoryColors[analysis.score.category] || theme.colors.text,
     [analysis.score.category]
@@ -137,6 +142,42 @@ export default function ResultsScreen({ route }: Props) {
   const showHalal =
     !!prefs?.halalCheckEnabled || healthPrefs.restrictions.includes("halal")
 
+  const selectedAllergens = useMemo(
+    () => Object.keys(profilePrefs.allergies || {}).filter((key) => profilePrefs.allergies[key]),
+    [profilePrefs.allergies]
+  )
+
+  const detectedAllergens = useMemo(() => {
+    const ingredientNames = analysis.ingredientBreakdown.map((item) => item.name.toLowerCase())
+    const matchers: Record<string, string[]> = {
+      peanuts: ["peanut"],
+      tree_nuts: ["almond", "walnut", "pecan", "cashew", "nut"],
+      dairy: ["milk", "cheese", "butter", "cream", "whey", "yogurt"],
+      eggs: ["egg"],
+      shellfish: ["shrimp", "crab", "lobster", "shellfish"],
+      fish: ["fish", "salmon", "tuna", "cod"],
+      soy: ["soy", "soya"],
+      wheat_gluten: ["wheat", "gluten", "barley", "rye"],
+      sesame: ["sesame"],
+      sulfites: ["sulfite", "sulphite"]
+    }
+
+    const detected = selectedAllergens.filter((allergen) =>
+      ingredientNames.some((name) =>
+        (matchers[allergen] || [allergen]).some((term) => name.includes(term))
+      )
+    )
+
+    if (profilePrefs.allergyOther) {
+      const other = profilePrefs.allergyOther.toLowerCase()
+      if (ingredientNames.some((name) => name.includes(other))) {
+        detected.push(profilePrefs.allergyOther)
+      }
+    }
+
+    return detected
+  }, [analysis.ingredientBreakdown, profilePrefs.allergyOther, selectedAllergens])
+
 
   useEffect(() => {
     const loadPrefs = async () => {
@@ -144,6 +185,12 @@ export default function ResultsScreen({ route }: Props) {
       if (cached) setPrefs(cached)
       const storedHealth = await getHealthPrefs()
       setHealthPrefs(storedHealth)
+      const storedProfile = await getProfilePrefs()
+      setProfilePrefs({
+        dietary: storedProfile.dietary || {},
+        allergies: storedProfile.allergies || {},
+        allergyOther: storedProfile.allergyOther || ""
+      })
     }
 
     loadPrefs()
@@ -177,56 +224,52 @@ export default function ResultsScreen({ route }: Props) {
         </Card>
       ) : null}
 
-      <SectionHeader title="Dietary focus" icon="leaf-outline" />
-      <Card>
-        <Text style={styles.metricLabel}>Dietary restrictions</Text>
-        <View style={styles.flagsWrap}>
-          {healthPrefs.restrictions.length ? (
-            healthPrefs.restrictions.map((item) => (
-              <View key={item} style={styles.flagChip}>
-                <Text style={styles.flagText}>{formatTag(item)}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.bodyMuted}>None selected</Text>
-          )}
+      <Card style={styles.scoreCard}>
+        <View style={styles.scoreRow}>
+          <View style={styles.scoreCircle}>
+            <Text style={styles.scoreValue}>{analysis.score.value}</Text>
+            <Text style={styles.scoreLabel}>Health score</Text>
+          </View>
+          <View style={styles.scoreMeta}>
+            <Text style={styles.scoreTitle}>{analysis.score.category}</Text>
+            <Text style={styles.bodyMuted}>AI model v1</Text>
+          </View>
         </View>
-        <View style={styles.divider} />
-        <Text style={styles.metricLabel}>Allergens</Text>
         <View style={styles.flagsWrap}>
-          {healthPrefs.allergens.length ? (
-            healthPrefs.allergens.map((item) => (
-              <View key={item} style={styles.flagChip}>
-                <Text style={styles.flagText}>{formatTag(item)}</Text>
+          {Object.entries(profilePrefs.dietary || {})
+            .filter(([, value]) => value)
+            .map(([key]) => (
+              <View key={key} style={styles.flagChip}>
+                <Text style={styles.flagText}>{formatTag(key)}</Text>
               </View>
-            ))
-          ) : (
-            <Text style={styles.bodyMuted}>None selected</Text>
-          )}
+            ))}
         </View>
       </Card>
 
-      <View style={styles.metricsGrid}>
-        <MetricCard
-          label="Quality score"
-          value={analysis.score.value}
-          helper={analysis.score.category}
-          accent={scoreColor}
-          icon="pulse-outline"
-        />
-        <MetricCard
-          label="Suitability"
-          value={suitabilityLabel}
-          helper={analysis.suitability?.reasons?.length ? analysis.suitability.reasons.join(" ") : "No additional notes."}
-          icon="checkmark-circle-outline"
-        />
-        <MetricCard
-          label="Approx calories per 100g"
-          value={caloriesPer100g === null ? "Unknown" : caloriesPer100g}
-          helper={caloriesPer100g === null ? "Estimate unavailable" : "Approximate estimate"}
-          icon="flame-outline"
-        />
-      </View>
+      <Card>
+        <SectionHeader title="Allergens detected" icon="alert-circle-outline" />
+        {detectedAllergens.length ? (
+          <View style={styles.flagsWrap}>
+            {detectedAllergens.map((item) => (
+              <View key={item} style={[styles.flagChip, styles.flagChipDanger]}>
+                <Text style={styles.flagText}>{formatTag(item)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.bodyMuted}>None detected based on ingredients.</Text>
+        )}
+      </Card>
+
+      <Card>
+        <SectionHeader title="Approx calories per 100g" icon="flame-outline" />
+        <Text style={styles.metricValue}>
+          {caloriesPer100g === null ? "Unknown" : caloriesPer100g}
+        </Text>
+        <Text style={styles.metricHelper}>
+          {caloriesPer100g === null ? "Estimate unavailable" : "Approximate estimate"}
+        </Text>
+      </Card>
 
       {showHalal ? (
         <>
@@ -332,6 +375,44 @@ const styles = StyleSheet.create({
   metricsGrid: {
     gap: spacing.md
   },
+  scoreCard: {
+    padding: spacing.md
+  },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.md
+  },
+  scoreCircle: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: theme.colors.panelAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border
+  },
+  scoreValue: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: theme.colors.text
+  },
+  scoreLabel: {
+    fontSize: 11,
+    color: theme.colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1
+  },
+  scoreMeta: {
+    flex: 1
+  },
+  scoreTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.text
+  },
   metricCard: {
     gap: spacing.sm
   },
@@ -377,6 +458,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.glass
+  },
+  flagChipDanger: {
+    borderColor: "rgba(230,57,70,0.4)",
+    backgroundColor: "rgba(230,57,70,0.12)"
   },
   flagText: {
     color: theme.colors.text,
