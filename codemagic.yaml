@@ -7,21 +7,25 @@ workflows:
       java: 17
       vars:
         EXPO_PUBLIC_API_BASE: "http://76.13.100.119:4000"
+        GRADLE_OPTS: "-Dorg.gradle.daemon=true -Dorg.gradle.caching=true"
+    cache:
+      paths:
+        - ~/.gradle/caches
+        - ~/.gradle/wrapper
+        - node_modules
+        - apps/mobile/node_modules
+        - packages/shared/node_modules
     scripts:
       - name: Install dependencies
         script: |
-          npm install
+          npm ci
       - name: Build shared package
         script: |
           npm run build --workspace packages/shared
-      - name: Install mobile workspace deps
-        script: |
-          cd apps/mobile
-          npm install --workspaces=false
       - name: Build debug APK
         script: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug --build-cache
     artifacts:
-      - apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+      - apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
