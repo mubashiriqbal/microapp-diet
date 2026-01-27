@@ -1,6 +1,6 @@
 workflows:
   android-debug:
-    name: Android Debug APK
+    name: Android Release APK (standalone)
     max_build_duration: 60
     environment:
       node: 18.18.2
@@ -15,14 +15,14 @@ workflows:
       - name: Build shared package
         script: |
           npm run build --workspace packages/shared
-      - name: Build debug APK
+      - name: Build release APK
         script: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew assembleDebug --build-cache \
+          ./gradlew assembleRelease --build-cache \
             -Pandroid.compileSdkVersion=33 \
             -Pandroid.targetSdkVersion=33 \
             -Pandroid.buildToolsVersion=33.0.0 \
             -Pandroid.ndkVersion=23.1.7779620
     artifacts:
-      - apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - apps/mobile/android/app/build/outputs/apk/release/app-release.apk
