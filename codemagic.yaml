@@ -8,13 +8,6 @@ workflows:
       vars:
         EXPO_PUBLIC_API_BASE: "http://76.13.100.119:4000"
         GRADLE_OPTS: "-Dorg.gradle.daemon=true -Dorg.gradle.caching=true"
-    cache:
-      paths:
-        - ~/.gradle/caches
-        - ~/.gradle/wrapper
-        - node_modules
-        - apps/mobile/node_modules
-        - packages/shared/node_modules
     scripts:
       - name: Install dependencies
         script: |
