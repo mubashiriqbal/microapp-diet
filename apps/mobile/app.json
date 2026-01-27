@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "What's In My Food",
-    "icon": "../../Logo.png",
+    "icon": "./assets/icon.png",
     "splash": {
-      "image": "../../Logo.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#F8FAFC"
     },
