@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react"
 import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
+import { Picker } from "@react-native-picker/picker"
 import * as Notifications from "expo-notifications"
 import { fetchPrefs, fetchProfile, saveProfile, updatePrefs } from "../api/client"
 import {
@@ -87,6 +88,8 @@ const allergenOptions = [
 export default function SettingsScreen() {
   const { setIsAuthed } = useContext(AuthContext)
   const [profile, setProfileState] = useState<UserProfile | null>(null)
+  const [countryCode, setCountryCode] = useState("+1")
+  const [phoneNumber, setPhoneNumber] = useState("")
   const [restrictions, setRestrictions] = useState<string[]>([])
   const [allergens, setAllergens] = useState<string[]>([])
   const [prefs, setPrefs] = useState<UserPrefs>(emptyPrefs)
@@ -112,6 +115,15 @@ export default function SettingsScreen() {
       const cachedProfile = await getProfile()
       if (cachedProfile) {
         setProfileState(cachedProfile)
+        if (cachedProfile.mobileNumber) {
+          const match = cachedProfile.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
+          if (match) {
+            setCountryCode(match[1])
+            setPhoneNumber(match[2])
+          } else {
+            setPhoneNumber(cachedProfile.mobileNumber)
+          }
+        }
       }
       const cached = await getUserPrefs()
       if (cached) {
@@ -121,6 +133,15 @@ export default function SettingsScreen() {
         const profileData = await fetchProfile()
         setProfileState(profileData)
         setProfile(profileData)
+        if (profileData.mobileNumber) {
+          const match = profileData.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
+          if (match) {
+            setCountryCode(match[1])
+            setPhoneNumber(match[2])
+          } else {
+            setPhoneNumber(profileData.mobileNumber)
+          }
+        }
         const [remotePrefs] = await Promise.all([fetchPrefs(profileData.id)])
         setPrefs({ ...emptyPrefs, ...remotePrefs })
         setUserPrefs(remotePrefs)
@@ -165,7 +186,7 @@ export default function SettingsScreen() {
       await setHealthPrefs({ restrictions, allergens })
       setStatus("Saved")
     } catch {
-      setStatus("Saved locally (offline)")
+      setStatus("Saved locally.")
       await setUserPrefs(prefs)
       await setHealthPrefs({ restrictions, allergens })
     }
@@ -295,13 +316,29 @@ export default function SettingsScreen() {
             placeholderTextColor={theme.colors.muted}
           />
           <Text style={styles.label}>Mobile number</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.mobileNumber ?? ""}
-            onChangeText={(value) => setProfileState({ ...profile, mobileNumber: value })}
-            placeholder="Mobile number"
-            placeholderTextColor={theme.colors.muted}
-          />
+          <View style={styles.phoneRow}>
+            <TextInput
+              style={styles.codeInput}
+              value={countryCode}
+              onChangeText={(value) => {
+                setCountryCode(value)
+                setProfileState({ ...profile, mobileNumber: `${value} ${phoneNumber}`.trim() })
+              }}
+              placeholder="+1"
+              placeholderTextColor={theme.colors.muted}
+            />
+            <TextInput
+              style={styles.phoneInput}
+              value={phoneNumber}
+              onChangeText={(value) => {
+                setPhoneNumber(value)
+                setProfileState({ ...profile, mobileNumber: `${countryCode} ${value}`.trim() })
+              }}
+              placeholder="Mobile number"
+              placeholderTextColor={theme.colors.muted}
+              keyboardType="phone-pad"
+            />
+          </View>
           <Text style={styles.label}>Age</Text>
           <TextInput
             style={styles.input}
@@ -344,27 +381,34 @@ export default function SettingsScreen() {
             placeholder="Weight in kg"
             placeholderTextColor={theme.colors.muted}
           />
-          <Text style={styles.label}>Gender (male/female/other)</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.gender ?? ""}
-            onChangeText={(value) =>
-              setProfileState({ ...profile, gender: value as UserProfile["gender"] })
-            }
-            placeholder="male"
-            placeholderTextColor={theme.colors.muted}
-          />
+          <Text style={styles.label}>Gender</Text>
+          <View style={styles.pickerWrap}>
+            <Picker
+              selectedValue={profile.gender ?? "other"}
+              onValueChange={(value) =>
+                setProfileState({ ...profile, gender: value as UserProfile["gender"] })
+              }
+            >
+              <Picker.Item label="Male" value="male" />
+              <Picker.Item label="Female" value="female" />
+              <Picker.Item label="Other" value="other" />
+            </Picker>
+          </View>
 
-          <Text style={styles.label}>Activity level (sedentary/light/moderate/active)</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.activityLevel ?? ""}
-            onChangeText={(value) =>
-              setProfileState({ ...profile, activityLevel: value as UserProfile["activityLevel"] })
-            }
-            placeholder="moderate"
-            placeholderTextColor={theme.colors.muted}
-          />
+          <Text style={styles.label}>Activity level</Text>
+          <View style={styles.pickerWrap}>
+            <Picker
+              selectedValue={profile.activityLevel ?? "moderate"}
+              onValueChange={(value) =>
+                setProfileState({ ...profile, activityLevel: value as UserProfile["activityLevel"] })
+              }
+            >
+              <Picker.Item label="Sedentary" value="sedentary" />
+              <Picker.Item label="Light" value="light" />
+              <Picker.Item label="Moderate" value="moderate" />
+              <Picker.Item label="Active" value="active" />
+            </Picker>
+          </View>
 
           <Text style={styles.label}>Dietary preference (halal/vegetarian/vegan/none)</Text>
           <TextInput
@@ -735,6 +779,37 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: theme.colors.text,
     backgroundColor: theme.colors.glassStrong
+  },
+  phoneRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16
+  },
+  codeInput: {
+    width: 80,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.glassStrong
+  },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: 12,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.glassStrong
+  },
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.glassStrong,
+    marginBottom: 16,
+    overflow: "hidden"
   },
   readonly: {
     color: theme.colors.muted,

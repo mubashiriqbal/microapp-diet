@@ -36,7 +36,7 @@ const iconMeta: Record<
   eggs: { name: "ellipse-outline", color: "#F59E0B" },
   peanuts: { name: "nutrition-outline", color: "#D97706" },
   tree_nuts: { name: "leaf-outline", color: "#A16207" },
-  fish: { name: "fish-outline", color: "#3B82F6" },
+  fish: { name: "fish", color: "#3B82F6" },
   shellfish: { name: "bug-outline", color: "#EF4444" },
   wheat: { name: "nutrition-outline", color: "#FBBF24" },
   soy: { name: "leaf-outline", color: "#22C55E" },

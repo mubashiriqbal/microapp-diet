@@ -7,7 +7,7 @@ import {
 } from "@react-navigation/drawer"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { StatusBar } from "expo-status-bar"
-import { Pressable, Text, View } from "react-native"
+import { Image, Pressable, Text, View } from "react-native"
 import { useEffect, useState, useContext } from "react"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -162,10 +162,11 @@ function DrawerContent({ navigation }: { navigation: any }) {
   return (
     <DrawerContentScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: insets.top + 28, paddingBottom: 24 }}>
       <View style={{ marginBottom: 20 }}>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: theme.colors.text }}>
-          SafePlate AI
-        </Text>
-        <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
+        <Image
+          source={require("./assets/icon.png")}
+          style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 8 }}
+        />
+        <Text style={{ color: theme.colors.muted, marginTop: 2 }}>
           I can trust this app with my health.
         </Text>
       </View>
