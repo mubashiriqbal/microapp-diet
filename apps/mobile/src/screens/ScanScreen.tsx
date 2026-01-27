@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image, ScrollView } from "react-nati
 import { Camera, CameraType } from "expo-camera"
 import { Ionicons } from "@expo/vector-icons"
 import { runAnalyze, saveHistory } from "../api/client"
-import { useFocusEffect, useNavigation } from "@react-navigation/native"
+import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native"
 import { theme } from "../theme"
 import { getProfile, setLastAnalysis, setScanImageForId } from "../storage/cache"
 
@@ -16,6 +16,8 @@ export default function ScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [image, setImage] = useState<ImageState>({})
   const cameraRef = useRef<Camera | null>(null)
+  const isFocused = useIsFocused()
+  const [cameraKey, setCameraKey] = useState(0)
   const navigation = useNavigation()
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function ScanScreen() {
   useFocusEffect(
     useCallback(() => {
       setStatus("Capture one clear food or label photo.")
+      setCameraKey((prev) => prev + 1)
     }, [])
   )
 
@@ -108,9 +111,14 @@ export default function ScanScreen() {
 
       {hasPermission === false ? (
         <Text style={styles.subtitle}>Camera permission is required.</Text>
-      ) : (
+      ) : isFocused ? (
         <View style={styles.cameraWrap}>
-          <Camera style={styles.camera} type={CameraType.back} ref={cameraRef} />
+          <Camera
+            key={cameraKey}
+            style={styles.camera}
+            type={CameraType.back}
+            ref={cameraRef}
+          />
           <View style={styles.cameraOverlay}>
             <View style={styles.frameBox} />
             <View style={styles.overlayHint}>
@@ -118,6 +126,8 @@ export default function ScanScreen() {
             </View>
           </View>
         </View>
+      ) : (
+        <View style={styles.cameraWrap} />
       )}
 
       {image.label?.uri ? (
