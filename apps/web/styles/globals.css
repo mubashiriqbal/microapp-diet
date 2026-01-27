@@ -241,3 +241,18 @@ a {
 .app-links a:hover {
   color: var(--text);
 }
+
+.multi-select-list .list-group-item {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.multi-select-list .list-group-item.is-selected {
+  background: rgba(26, 188, 156, 0.12);
+  color: var(--text);
+}
+
+.multi-select-list .list-group-item.is-selected .text-muted {
+  color: var(--muted) !important;
+}

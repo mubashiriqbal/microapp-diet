@@ -49,7 +49,7 @@ export default function Signup() {
       setToken(response.token)
       setProfile({ id: response.profile.id, fullName: response.profile.fullName, email: response.profile.email })
       setHealthPrefs({ restrictions, allergens })
-      router.push("/profile")
+      router.push("/settings")
     } catch (error) {
       setStatus((error as Error).message)
     }

@@ -65,7 +65,7 @@ export default function MultiSelect({ label, options, selected, onChange, placeh
         })}
       </div>
 
-      <div className="list-group">
+      <div className="list-group multi-select-list">
         {filtered.map((option) => {
           const isSelected = selected.includes(option.value)
           return (
@@ -73,7 +73,7 @@ export default function MultiSelect({ label, options, selected, onChange, placeh
               key={option.value}
               type="button"
               className={`list-group-item list-group-item-action d-flex justify-content-between align-items-start ${
-                isSelected ? "active" : ""
+                isSelected ? "is-selected" : ""
               }`}
               onClick={() => toggle(option.value)}
             >
