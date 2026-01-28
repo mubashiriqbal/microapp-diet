@@ -143,6 +143,12 @@ function ScanStackScreen() {
         headerStyle: { backgroundColor: theme.colors.panel },
         headerTintColor: theme.colors.text,
         headerTitleStyle: { fontFamily: theme.font.heading },
+        headerTitle: () => (
+          <Image
+            source={require("./assets/icon.png")}
+            style={{ width: 28, height: 28, resizeMode: "contain" }}
+          />
+        ),
         headerLeft: () => (
           <Pressable
             style={{ paddingHorizontal: 16, paddingVertical: 8 }}
@@ -200,6 +206,12 @@ function MainTabs() {
         headerStyle: { backgroundColor: theme.colors.panel },
         headerTintColor: theme.colors.text,
         headerTitleStyle: { fontFamily: theme.font.heading },
+        headerTitle: () => (
+          <Image
+            source={require("./assets/icon.png")}
+            style={{ width: 28, height: 28, resizeMode: "contain" }}
+          />
+        ),
         headerLeft: () => (
           <Pressable
             style={{ paddingHorizontal: 16, paddingVertical: 8 }}

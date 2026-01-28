@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
 import { fetchHistory } from "../api/client"
 import {
@@ -9,7 +9,7 @@ import {
 } from "../storage/cache"
 import type { ScanHistory } from "@wimf/shared"
 import { theme } from "../theme"
-import { useNavigation } from "@react-navigation/native"
+import { useNavigation, useFocusEffect } from "@react-navigation/native"
 
 export default function HistoryScreen() {
   const navigation = useNavigation()
@@ -17,35 +17,41 @@ export default function HistoryScreen() {
   const [status, setStatus] = useState("Loading...")
   const [imageMap, setImageMap] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    const load = async () => {
-      const cached = await getScanHistoryCache()
-      if (cached.length) {
-        setHistory(cached)
-        setStatus("Loaded cached history")
-      }
-
-      try {
-        const storedImages = await getScanImageMap()
-        setImageMap(storedImages)
-        const profile = await getProfile()
-        if (!profile) {
-          setStatus("Please log in.")
-          return
-        }
-        const fresh = await fetchHistory(profile.id)
-        setHistory(fresh)
-        setScanHistoryCache(fresh)
-        setStatus("Synced from API")
-      } catch {
-        if (!cached.length) {
-          setStatus("Unable to reach API")
-        }
-      }
+  const loadHistory = useCallback(async () => {
+    const cached = await getScanHistoryCache()
+    if (cached.length) {
+      setHistory(cached)
+      setStatus("")
     }
 
-    load()
+    try {
+      const storedImages = await getScanImageMap()
+      setImageMap(storedImages)
+      const profile = await getProfile()
+      if (!profile) {
+        setStatus("Please log in.")
+        return
+      }
+      const fresh = await fetchHistory(profile.id)
+      setHistory(fresh)
+      setScanHistoryCache(fresh)
+      setStatus("")
+    } catch {
+      if (!cached.length) {
+        setStatus("Unable to reach API")
+      }
+    }
   }, [])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory()
+    }, [loadHistory])
+  )
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

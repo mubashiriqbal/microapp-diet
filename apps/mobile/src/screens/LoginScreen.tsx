@@ -62,6 +62,23 @@ export default function LoginScreen({ navigation }: Props) {
         <Text style={styles.primaryButtonText}>Log in</Text>
       </Pressable>
 
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or continue with</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <View style={styles.socialRow}>
+        <Pressable style={[styles.socialButton, styles.googleButton]}>
+          <Ionicons name="logo-google" size={18} color="#EA4335" />
+          <Text style={styles.socialText}>Google</Text>
+        </Pressable>
+        <Pressable style={[styles.socialButton, styles.microsoftButton]}>
+          <Ionicons name="logo-microsoft" size={18} color="#2563EB" />
+          <Text style={styles.socialText}>Microsoft</Text>
+        </Pressable>
+      </View>
+
       <Pressable onPress={() => navigation.navigate("Signup")}>
         <Text style={styles.link}>Create an account</Text>
       </Pressable>
@@ -122,6 +139,49 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#ffffff",
     fontWeight: "700"
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 18,
+    marginBottom: 12
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: 12
+  },
+  socialButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.glass,
+    flexDirection: "row",
+    gap: 8
+  },
+  googleButton: {
+    backgroundColor: "#ffffff"
+  },
+  microsoftButton: {
+    backgroundColor: "#ffffff"
+  },
+  socialText: {
+    color: theme.colors.text,
+    fontWeight: "600"
   },
   link: {
     color: theme.colors.accent2,

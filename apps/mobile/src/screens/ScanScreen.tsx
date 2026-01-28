@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { runAnalyze, saveHistory } from "../api/client"
 import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native"
 import { theme } from "../theme"
-import { getProfile, setLastAnalysis, setScanImageForId } from "../storage/cache"
+import { getProfile, getScanHistoryCache, setLastAnalysis, setScanHistoryCache, setScanImageForId } from "../storage/cache"
 
 type ImageState = {
   label?: { uri: string; name: string; type: string }
@@ -93,6 +93,9 @@ export default function ScanScreen() {
         })
         if (saved?.id && image.label?.uri) {
           await setScanImageForId(saved.id, image.label.uri)
+          const cached = await getScanHistoryCache()
+          const next = [saved, ...cached.filter((entry) => entry.id !== saved.id)]
+          await setScanHistoryCache(next)
         }
       }
 
