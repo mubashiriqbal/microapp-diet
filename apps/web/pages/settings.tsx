@@ -43,7 +43,7 @@ const allergyChecks = [
   { key: "tree_nuts", label: "Tree Nuts", icon: "🌰", color: "#B45309" },
   { key: "dairy", label: "Dairy", icon: "🥛", color: "#2563EB" },
   { key: "eggs", label: "Eggs", icon: "🥚", color: "#F59E0B" },
-  { key: "shellfish", label: "Shellfish", icon: "🦐", color: "#EF4444" },
+  { key: "shellfish", label: "Shellfish", icon: "🦞", color: "#EF4444" },
   { key: "fish", label: "Fish", icon: "🐟", color: "#3B82F6" },
   { key: "soy", label: "Soy", icon: "🫘", color: "#22C55E" },
   { key: "wheat_gluten", label: "Wheat / Gluten", icon: "🌾", color: "#F97316" },
