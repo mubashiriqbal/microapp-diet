@@ -34,7 +34,6 @@ const emptyPrefs: UserPrefs = {
 }
 
 const countryOptions = ["United States", "United Kingdom", "Pakistan", "United Arab Emirates", "Saudi Arabia", "Canada", "Australia"]
-const countryCodes = ["+1", "+44", "+92", "+971", "+966", "+61"]
 
 const dietaryOptions = [
   { key: "halal", label: "Halal", icon: "checkmark-circle", color: "#1ABC9C" },
@@ -105,7 +104,6 @@ const getDefaultCountry = () => {
 export default function SettingsScreen() {
   const { setIsAuthed } = useContext(AuthContext)
   const [profile, setProfileState] = useState<UserProfile | null>(null)
-  const [countryCode, setCountryCode] = useState("+1")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [profilePrefs, setProfilePrefsState] = useState(() => ({
     photoUri: null as string | null,
@@ -142,13 +140,7 @@ export default function SettingsScreen() {
       if (cachedProfile) {
         setProfileState(cachedProfile)
         if (cachedProfile.mobileNumber) {
-          const match = cachedProfile.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
-          if (match) {
-            setCountryCode(match[1])
-            setPhoneNumber(match[2])
-          } else {
-            setPhoneNumber(cachedProfile.mobileNumber)
-          }
+          setPhoneNumber(cachedProfile.mobileNumber)
         }
       }
       const cachedPrefs = await getUserPrefs()
@@ -161,13 +153,7 @@ export default function SettingsScreen() {
         setProfileState(profileData)
         setProfile(profileData)
         if (profileData.mobileNumber) {
-          const match = profileData.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
-          if (match) {
-            setCountryCode(match[1])
-            setPhoneNumber(match[2])
-          } else {
-            setPhoneNumber(profileData.mobileNumber)
-          }
+          setPhoneNumber(profileData.mobileNumber)
         }
         const remotePrefs = await fetchPrefs(profileData.id)
         setPrefs({ ...emptyPrefs, ...remotePrefs })
@@ -236,7 +222,9 @@ export default function SettingsScreen() {
   const pickPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1]
     })
     if (!result.canceled && result.assets.length > 0) {
       setProfilePrefsState((prev) => ({ ...prev, photoUri: result.assets[0].uri }))
@@ -249,7 +237,7 @@ export default function SettingsScreen() {
       if (profile) {
         const payload = {
           ...profile,
-          mobileNumber: `${countryCode} ${phoneNumber}`.trim()
+          mobileNumber: phoneNumber.trim()
         }
         const savedProfile = await saveProfile(payload)
         setProfileState(savedProfile)
@@ -279,7 +267,7 @@ export default function SettingsScreen() {
       await setProfilePrefs(profilePrefs)
       setStatus("Saved")
     } catch {
-      setStatus("Saved locally.")
+      setStatus("Saved")
       const restrictions = Object.entries(profilePrefs.dietary || {})
         .filter(([, value]) => value)
         .map(([key]) => key)
@@ -301,9 +289,6 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-      <Text style={styles.subtitle}>Manage your preferences and alerts.</Text>
-
       {profile && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Personal information</Text>
@@ -338,32 +323,17 @@ export default function SettingsScreen() {
           />
 
           <Text style={styles.label}>Phone number</Text>
-          <View style={styles.phoneRow}>
-            <View style={styles.codePickerWrap}>
-              <Picker
-                selectedValue={countryCode}
-                onValueChange={(value) => {
-                  setCountryCode(value)
-                  setProfileState({ ...profile, mobileNumber: `${value} ${phoneNumber}`.trim() })
-                }}
-              >
-                {countryCodes.map((code) => (
-                  <Picker.Item key={code} label={code} value={code} />
-                ))}
-              </Picker>
-            </View>
-            <TextInput
-              style={styles.phoneInput}
-              value={phoneNumber}
-              onChangeText={(value) => {
-                setPhoneNumber(value)
-                setProfileState({ ...profile, mobileNumber: `${countryCode} ${value}`.trim() })
-              }}
-              placeholder="Mobile number"
-              placeholderTextColor={theme.colors.muted}
-              keyboardType="phone-pad"
-            />
-          </View>
+          <TextInput
+            style={styles.input}
+            value={phoneNumber}
+            onChangeText={(value) => {
+              setPhoneNumber(value)
+              setProfileState({ ...profile, mobileNumber: value.trim() })
+            }}
+            placeholder="Phone number"
+            placeholderTextColor={theme.colors.muted}
+            keyboardType="phone-pad"
+          />
 
           <Text style={styles.label}>Date of birth</Text>
           <TextInput
@@ -587,17 +557,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.bg
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginBottom: 6,
-    fontFamily: theme.font.heading
-  },
-  subtitle: {
-    color: theme.colors.muted,
-    marginBottom: theme.spacing.md
-  },
   card: {
     backgroundColor: theme.colors.panel,
     borderRadius: theme.radius.lg,
@@ -658,28 +617,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     padding: 12,
     marginBottom: 16,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.glassStrong
-  },
-  phoneRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16
-  },
-  codePickerWrap: {
-    width: 90,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.glassStrong,
-    overflow: "hidden"
-  },
-  phoneInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: 12,
     color: theme.colors.text,
     backgroundColor: theme.colors.glassStrong
   },

@@ -28,6 +28,7 @@ const optionMeta: Record<
   nut_allergy: { color: "#E76F51", label: "N" },
   halal: { color: "#0EA5A5", label: "H" },
   kosher: { color: "#6366F1", label: "K" },
+  pescatarian: { color: "#3B82F6", label: "P" },
   hindu: { color: "#F97316", label: "Hi" },
   keto: { color: "#8B5CF6", label: "K" },
   diabetic: { color: "#EF4444", label: "D" },

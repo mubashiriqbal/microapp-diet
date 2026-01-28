@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { View, Text, TextInput, StyleSheet, Pressable } from "react-native"
+import { View, Text, TextInput, StyleSheet, Pressable, Image } from "react-native"
 import { resetPassword } from "@wimf/shared"
 import { apiBase } from "../api/config"
 import { theme } from "../theme"
@@ -27,6 +27,9 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.logoWrap}>
+        <Image source={require("../../assets/icon.png")} style={styles.logoImage} />
+      </View>
       <Text style={styles.title}>Reset password</Text>
       <Text style={styles.subtitle}>Paste your reset token.</Text>
       <TextInput
@@ -66,6 +69,15 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.bg
+  },
+  logoWrap: {
+    alignItems: "center",
+    marginBottom: theme.spacing.lg
+  },
+  logoImage: {
+    width: 96,
+    height: 96,
+    resizeMode: "contain"
   },
   title: {
     fontSize: 26,

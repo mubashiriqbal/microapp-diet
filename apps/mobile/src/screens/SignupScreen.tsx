@@ -1,5 +1,5 @@
 import { useContext, useState } from "react"
-import { View, Text, TextInput, StyleSheet, Pressable, ScrollView } from "react-native"
+import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, Image } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { signUpUser } from "../api/client"
 import { setHealthPrefs, setProfile, setToken, setUserId } from "../storage/cache"
@@ -72,8 +72,9 @@ export default function SignupScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.logo}>SafePlate AI</Text>
-      <Text style={styles.tagline}>I can trust this app with my health.</Text>
+      <View style={styles.logoWrap}>
+        <Image source={require("../../assets/icon.png")} style={styles.logoImage} />
+      </View>
       <Text style={styles.title}>Sign up</Text>
       <Text style={styles.subtitle}>Create your profile.</Text>
 
@@ -168,17 +169,14 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.xl + 12,
     backgroundColor: theme.colors.bg
   },
-  logo: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginTop: 0,
-    marginBottom: 6,
-    fontFamily: theme.font.heading
-  },
-  tagline: {
-    color: theme.colors.muted,
+  logoWrap: {
+    alignItems: "center",
     marginBottom: theme.spacing.lg
+  },
+  logoImage: {
+    width: 96,
+    height: 96,
+    resizeMode: "contain"
   },
   title: {
     fontSize: 28,

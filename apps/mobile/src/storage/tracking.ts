@@ -67,6 +67,19 @@ export const addJournalItem = async (item: JournalItem) => {
   return updated
 }
 
+export const updateJournalItem = async (itemId: string, patch: Partial<JournalItem>) => {
+  const items = await getJournalItems()
+  const updated = items.map((item) => (item.id === itemId ? { ...item, ...patch } : item))
+  await setJournalItems(updated)
+  return updated
+}
+
+export const deleteJournalItem = async (itemId: string) => {
+  const updated = (await getJournalItems()).filter((item) => item.id !== itemId)
+  await setJournalItems(updated)
+  return updated
+}
+
 export const getJournalForDate = async (date: string): Promise<JournalDayLog> => {
   const items = (await getJournalItems()).filter((item) => item.date === date)
   let missingNutritionCount = 0

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react"
 import { View, Text, StyleSheet, Pressable, ScrollView, TextInput } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
 import type { AnalyzeFromImagesResponse, ManualFood, MealType } from "@wimf/shared"
 import { theme } from "../theme"
 import {
   addJournalItem,
   addManualFood,
+  deleteJournalItem,
   getJournalForDate,
-  getManualFoods
+  getManualFoods,
+  updateJournalItem
 } from "../storage/tracking"
 import { getLastAnalysis } from "../storage/cache"
 
@@ -34,6 +37,8 @@ export default function JournalScreen() {
   const [manualCalories, setManualCalories] = useState("")
   const [lastScan, setLastScan] = useState<AnalyzeFromImagesResponse | null>(null)
   const [status, setStatus] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingGrams, setEditingGrams] = useState("")
 
   useEffect(() => {
     const load = async () => {
@@ -208,8 +213,54 @@ export default function JournalScreen() {
           )}
           {itemsByMeal[meal.value].map((item) => (
             <View style={styles.itemRow} key={item.id}>
-              <Text style={styles.itemName}>{item.name || "Item"}</Text>
-              <Text style={styles.itemMeta}>{item.grams}g</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemName}>{item.name || "Item"}</Text>
+                {editingId === item.id ? (
+                  <TextInput
+                    style={styles.inlineInput}
+                    value={editingGrams}
+                    onChangeText={setEditingGrams}
+                    keyboardType="numeric"
+                  />
+                ) : (
+                  <Text style={styles.itemMeta}>{item.grams}g</Text>
+                )}
+              </View>
+              <View style={styles.itemActions}>
+                {editingId === item.id ? (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={async () => {
+                      const gramsValue = Number(editingGrams) || item.grams
+                      await updateJournalItem(item.id, { grams: gramsValue })
+                      setEditingId(null)
+                      setEditingGrams("")
+                      setLog(await getJournalForDate(date))
+                    }}
+                  >
+                    <Ionicons name="checkmark" size={16} color={theme.colors.accent2} />
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      setEditingId(item.id)
+                      setEditingGrams(String(item.grams))
+                    }}
+                  >
+                    <Ionicons name="create-outline" size={16} color={theme.colors.text} />
+                  </Pressable>
+                )}
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={async () => {
+                    await deleteJournalItem(item.id)
+                    setLog(await getJournalForDate(date))
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={16} color={theme.colors.warning} />
+                </Pressable>
+              </View>
             </View>
           ))}
         </View>
@@ -313,6 +364,32 @@ const styles = StyleSheet.create({
   },
   itemMeta: {
     color: theme.colors.muted
+  },
+  itemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.panel
+  },
+  inlineInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 4,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.glassStrong,
+    width: 80
   },
   notice: {
     color: theme.colors.warning,

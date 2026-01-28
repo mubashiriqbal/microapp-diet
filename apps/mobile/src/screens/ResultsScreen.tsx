@@ -41,11 +41,15 @@ export default function ResultsScreen({ route }: Props) {
   const [profilePrefs, setProfilePrefs] = useState({
     dietary: {} as Record<string, boolean>,
     allergies: {} as Record<string, boolean>,
-    allergyOther: ""
+    allergyOther: "",
+    sensitivities: {} as Record<string, boolean>
   })
 
   const caloriesPer100g = useMemo(() => {
     const nutrition = analysis.nutritionHighlights
+    if (analysis.caloriesPer50g !== null && analysis.caloriesPer50g !== undefined) {
+      return Number((analysis.caloriesPer50g * 2).toFixed(1))
+    }
     if (!nutrition) return null
     if (nutrition.caloriesPer100g !== null && nutrition.caloriesPer100g !== undefined) {
       return Number(nutrition.caloriesPer100g.toFixed(1))
@@ -108,6 +112,60 @@ export default function ResultsScreen({ route }: Props) {
     return detected
   }, [analysis.ingredientBreakdown, profilePrefs.allergyOther, selectedAllergens])
 
+  const sensitivityAlerts = useMemo(() => {
+    const selected = Object.entries(profilePrefs.sensitivities || {}).filter(([, value]) => value)
+    if (!selected.length) return []
+
+    const text = `${analysis.productName ?? ""} ${analysis.ingredientBreakdown
+      .map((item) => item.name)
+      .join(" ")}`.toLowerCase()
+    const nutrition = analysis.nutritionHighlights
+    const sodiumHigh = nutrition?.sodium_mg !== null && nutrition?.sodium_mg !== undefined
+      ? nutrition.sodium_mg > 600
+      : false
+    const sugarHigh = nutrition?.sugar_g !== null && nutrition?.sugar_g !== undefined
+      ? nutrition.sugar_g > 12
+      : false
+    const caloriesHigh = caloriesPer100g !== null ? caloriesPer100g > 260 : false
+    const fried = /fried|fries|deep[-\\s]?fried|oil|greasy/.test(text)
+
+    const checks: Record<string, { label: string; hit: boolean; message: string }> = {
+      hypertension: {
+        label: "Hypertension-friendly",
+        hit: sodiumHigh || text.includes("salt") || text.includes("sodium"),
+        message: sodiumHigh
+          ? "High sodium detected."
+          : "No clear sodium triggers detected."
+      },
+      diabetic: {
+        label: "Diabetic-friendly",
+        hit: sugarHigh || text.includes("sugar") || text.includes("sweet"),
+        message: sugarHigh ? "Added sugar detected." : "No clear sugar triggers detected."
+      },
+      heartHealthy: {
+        label: "Heart-healthy",
+        hit: fried,
+        message: fried ? "Fried/processed keywords detected." : "No clear fried/processed triggers detected."
+      },
+      weightLoss: {
+        label: "Weight-loss focused",
+        hit: fried || caloriesHigh,
+        message: caloriesHigh
+          ? "Higher calorie density detected."
+          : fried
+            ? "Fried/processed keywords detected."
+            : "No clear calorie density triggers detected."
+      }
+    }
+
+    return selected.map(([key]) => ({
+      key,
+      label: checks[key]?.label || formatTag(key),
+      hit: checks[key]?.hit || false,
+      message: checks[key]?.message || "No clear triggers detected."
+    }))
+  }, [analysis.ingredientBreakdown, analysis.nutritionHighlights, analysis.productName, caloriesPer100g, profilePrefs.sensitivities])
+
   useEffect(() => {
     const loadPrefs = async () => {
       const cached = await getUserPrefs()
@@ -118,7 +176,8 @@ export default function ResultsScreen({ route }: Props) {
       setProfilePrefs({
         dietary: storedProfile.dietary || {},
         allergies: storedProfile.allergies || {},
-        allergyOther: storedProfile.allergyOther || ""
+        allergyOther: storedProfile.allergyOther || "",
+        sensitivities: storedProfile.sensitivities || {}
       })
     }
 
@@ -195,6 +254,25 @@ export default function ResultsScreen({ route }: Props) {
           <Text style={styles.bodyText}>{analysis.halal.status.toUpperCase()}</Text>
           <Text style={styles.bodyMuted}>Confidence {analysis.halal.confidence.toFixed(2)}</Text>
           <Text style={styles.bodyText}>{analysis.halal.explanation}</Text>
+        </Card>
+      ) : null}
+
+      {sensitivityAlerts.length ? (
+        <Card>
+          <SectionHeader title="Health sensitivities" />
+          {sensitivityAlerts.map((item) => (
+            <View key={item.key} style={styles.sensitivityRow}>
+              <Ionicons
+                name={item.hit ? "alert-circle" : "checkmark-circle"}
+                size={16}
+                color={item.hit ? theme.colors.warning : theme.colors.accent}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sensitivityLabel}>{item.label}</Text>
+                <Text style={styles.bodyMuted}>{item.message}</Text>
+              </View>
+            </View>
+          ))}
         </Card>
       ) : null}
 
@@ -334,6 +412,17 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft,
     fontSize: 13,
     lineHeight: 18
+  },
+  sensitivityRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 10
+  },
+  sensitivityLabel: {
+    fontWeight: "600",
+    color: theme.colors.text,
+    fontSize: 13
   },
   bodyMuted: {
     color: theme.colors.muted,

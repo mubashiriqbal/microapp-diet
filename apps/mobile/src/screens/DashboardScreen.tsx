@@ -107,7 +107,7 @@ export default function DashboardScreen() {
   }, [history, profilePrefs.allergies])
 
   const recentScans = history.slice(0, 2)
-  const popularScans = history.slice(0, 3)
+  const popularScans = history.slice(0, 2)
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

@@ -49,8 +49,6 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>History</Text>
-      <Text style={styles.status}>{status}</Text>
       {history.map((entry) => {
         const score = entry.analysisSnapshot?.score?.value
         const nutrition = entry.analysisSnapshot?.nutritionHighlights
@@ -107,17 +105,6 @@ const styles = StyleSheet.create({
   container: {
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.bg
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    marginBottom: 8,
-    color: theme.colors.text,
-    fontFamily: theme.font.heading
-  },
-  status: {
-    color: theme.colors.muted,
-    marginBottom: 16
   },
   card: {
     padding: 16,

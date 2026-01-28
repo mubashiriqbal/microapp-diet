@@ -22,7 +22,6 @@ const emptyPrefs: UserPrefs = {
 }
 
 const countryOptions = ["United States", "United Kingdom", "Pakistan", "United Arab Emirates", "Saudi Arabia", "Canada", "Australia"]
-const countryCodes = ["+1", "+44", "+92", "+971", "+966", "+61"]
 
 const dietaryToggles = [
   { key: "halal", label: "Halal", icon: "H", color: "#1ABC9C" },
@@ -83,7 +82,6 @@ export default function Settings() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [prefs, setPrefs] = useState<UserPrefs>(emptyPrefs)
   const [profilePrefs, setProfilePrefsState] = useState(getProfilePrefs())
-  const [countryCode, setCountryCode] = useState("+1")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [status, setStatus] = useState("")
 
@@ -107,13 +105,7 @@ export default function Settings() {
           setPrefs({ ...prefsData })
         }
         if (profileData.mobileNumber) {
-          const match = profileData.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
-          if (match) {
-            setCountryCode(match[1])
-            setPhoneNumber(match[2])
-          } else {
-            setPhoneNumber(profileData.mobileNumber)
-          }
+          setPhoneNumber(profileData.mobileNumber)
         }
         const storedHealth = getHealthPrefs()
         const storedProfilePrefs = getProfilePrefs()
@@ -188,7 +180,7 @@ export default function Settings() {
     try {
       const payload = {
         ...profile,
-        mobileNumber: `${countryCode} ${phoneNumber}`.trim()
+        mobileNumber: phoneNumber.trim()
       }
       const saved = await updateProfile({ baseUrl: apiBase, token }, payload)
       setProfile(saved)
@@ -285,35 +277,17 @@ export default function Settings() {
               </div>
               <div className="col-md-6">
                 <label className="form-label">Phone number</label>
-                <div className="input-group">
-                  <select
-                    className="form-select"
-                    style={{ maxWidth: 120 }}
-                    value={countryCode}
-                    onChange={(event) => {
-                      setCountryCode(event.target.value)
-                      setProfile((prev) =>
-                        prev ? { ...prev, mobileNumber: `${event.target.value} ${phoneNumber}`.trim() } : prev
-                      )
-                    }}
-                  >
-                    {countryCodes.map((code) => (
-                      <option key={code} value={code}>
-                        {code}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    className="form-control"
-                    value={phoneNumber}
-                    onChange={(event) => {
-                      setPhoneNumber(event.target.value)
-                      setProfile((prev) =>
-                        prev ? { ...prev, mobileNumber: `${countryCode} ${event.target.value}`.trim() } : prev
-                      )
-                    }}
-                  />
-                </div>
+                <input
+                  className="form-control"
+                  value={phoneNumber}
+                  onChange={(event) => {
+                    setPhoneNumber(event.target.value)
+                    setProfile((prev) =>
+                      prev ? { ...prev, mobileNumber: event.target.value.trim() } : prev
+                    )
+                  }}
+                  placeholder="Phone number"
+                />
               </div>
               <div className="col-md-6">
                 <label className="form-label">Date of birth</label>

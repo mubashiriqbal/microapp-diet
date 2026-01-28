@@ -38,8 +38,8 @@ const tabConfig: Array<{
   icon: keyof typeof Ionicons.glyphMap
 }> = [
   { name: "Dashboard", label: "Dashboard", icon: "speedometer-outline" },
-  { name: "Scan", label: "Scan", icon: "camera-outline" },
   { name: "Journal", label: "Journal", icon: "book-outline" },
+  { name: "Scan", label: "Scan", icon: "camera-outline" },
   { name: "History", label: "History", icon: "time-outline" },
   { name: "Settings", label: "Profile", icon: "settings-outline" }
 ]
@@ -72,7 +72,12 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             target: route.key,
             canPreventDefault: true
           })
-          if (!isFocused && !event.defaultPrevented) {
+          if (event.defaultPrevented) return
+          if (route.name === "Scan") {
+            navigation.navigate("Scan", { screen: "ScanHome" })
+            return
+          }
+          if (!isFocused) {
             navigation.navigate(route.name)
           }
         }
@@ -212,7 +217,12 @@ function MainTabs() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{}}
+        options={{ headerTitle: "" }}
+      />
+      <Tab.Screen
+        name="Journal"
+        component={JournalScreen}
+        options={{ headerTitle: "" }}
       />
       <Tab.Screen
         name="Scan"
@@ -220,11 +230,6 @@ function MainTabs() {
         options={{
           headerShown: false
         }}
-      />
-      <Tab.Screen
-        name="Journal"
-        component={JournalScreen}
-        options={{}}
       />
       <Tab.Screen
         name="History"

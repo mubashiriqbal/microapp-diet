@@ -111,7 +111,6 @@ export default function ScanScreen() {
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.title}>Scan</Text>
           <Text style={styles.subtitle}>{status}</Text>
         </View>
         <View style={styles.progressPill}>
@@ -171,7 +170,7 @@ export default function ScanScreen() {
           onPress={handleAnalyze}
           disabled={!image.label}
         >
-          <Ionicons name="sparkles" size={18} color="#ffffff" />
+          <Ionicons name="search" size={18} color="#ffffff" />
           <Text style={styles.primaryActionText}>Analyze</Text>
         </Pressable>
       </View>
@@ -200,13 +199,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: theme.spacing.md
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 4,
-    color: theme.colors.text,
-    fontFamily: theme.font.heading
   },
   subtitle: {
     color: theme.colors.muted
