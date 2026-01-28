@@ -132,12 +132,14 @@ a {
 }
 
 .scan-chip {
-  padding: 10px 16px;
-  min-width: 92px;
+  padding: 6px 12px;
+  min-width: 72px;
   text-align: center;
   font-weight: 600;
   background: rgba(26, 188, 156, 0.14);
   align-self: flex-start;
+  border-radius: 999px;
+  font-size: 0.75rem;
 }
 
 .flag-chip {
@@ -262,8 +264,16 @@ a {
   color: #ffffff;
 }
 
+.multi-select-list .list-group-item.is-selected .fw-semibold {
+  color: #ffffff;
+}
+
 .multi-select-list .list-group-item.is-selected .text-muted {
   color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.multi-select-list .list-group-item.is-selected .small {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .option-icon {
@@ -278,4 +288,17 @@ a {
   color: #ffffff;
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.pref-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }

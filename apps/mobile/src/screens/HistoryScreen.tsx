@@ -75,12 +75,15 @@ export default function HistoryScreen() {
               key={entry.id}
               onPress={() => {
                 if (entry.analysisSnapshot) {
-                  navigation.navigate("Scan" as never, {
-                    screen: "Results",
+                  navigation.navigate("MainTabs" as never, {
+                    screen: "Scan",
                     params: {
-                      analysis: entry.analysisSnapshot,
-                      imageUri: imageMap[entry.id] || null,
-                      fromHistory: true
+                      screen: "Results",
+                      params: {
+                        analysis: entry.analysisSnapshot,
+                        imageUri: imageMap[entry.id] || null,
+                        fromHistory: true
+                      }
                     }
                   } as never)
                 }

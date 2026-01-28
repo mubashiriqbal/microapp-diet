@@ -32,6 +32,7 @@ export default function ScanScreen() {
   useFocusEffect(
     useCallback(() => {
       setStatus("Capture one clear food or label photo.")
+      setImage({})
       setCameraKey((prev) => prev + 1)
     }, [])
   )
@@ -71,6 +72,16 @@ export default function ScanScreen() {
 
     try {
       const analysis = await runAnalyze(formData)
+
+      const isLikelyFood =
+        !!analysis.productName ||
+        (analysis.ingredientBreakdown?.length || 0) > 0 ||
+        !!analysis.nutritionHighlights
+
+      if (!isLikelyFood) {
+        setStatus("Sorry, this doesn't look like a food item. Please rescan.")
+        return
+      }
       await setLastAnalysis(analysis)
       if (profile?.id) {
         const saved = await saveHistory({
@@ -97,7 +108,7 @@ export default function ScanScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.title}>Scan</Text>
@@ -126,9 +137,7 @@ export default function ScanScreen() {
             </View>
           </View>
         </View>
-      ) : (
-        <View style={styles.cameraWrap} />
-      )}
+      ) : null}
 
       {image.label?.uri ? (
         <View style={styles.previewCard}>
@@ -145,6 +154,7 @@ export default function ScanScreen() {
             onPress={() => {
               setImage({})
               setStatus("Capture one clear food or label photo.")
+              cameraRef.current = null
               setCameraKey((prev) => prev + 1)
             }}
           >
@@ -161,7 +171,7 @@ export default function ScanScreen() {
           onPress={handleAnalyze}
           disabled={!image.label}
         >
-          <Ionicons name="scan-outline" size={18} color="#ffffff" />
+          <Ionicons name="sparkles" size={18} color="#ffffff" />
           <Text style={styles.primaryActionText}>Analyze</Text>
         </Pressable>
       </View>
@@ -182,6 +192,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl + 80,
     backgroundColor: theme.colors.bg
   },
   headerRow: {
@@ -211,13 +222,13 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     color: theme.colors.muted,
-    fontSize: 11,
+    fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: 1.4
   },
   progressValue: {
     color: theme.colors.text,
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "700",
     marginTop: 2
   },
@@ -258,8 +269,8 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "600"
+    fontSize: 15,
+    fontWeight: "700"
   },
   actionRow: {
     flexDirection: "row",

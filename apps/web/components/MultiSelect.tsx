@@ -138,12 +138,14 @@ export default function MultiSelect({ label, options, selected, onChange, placeh
                 >
                   {optionMeta[option.value]?.label || option.label.slice(0, 1)}
                 </span>
-                <div className="fw-semibold">{option.label}</div>
-                {option.description && (
-                  <div className="small text-muted">{option.description}</div>
-                )}
+                <div>
+                  <div className="fw-semibold">{option.label}</div>
+                  {option.description && (
+                    <div className="small text-muted">{option.description}</div>
+                  )}
+                </div>
               </div>
-              <span>{isSelected ? "check" : ""}</span>
+              <span className="fw-semibold">{isSelected ? "✓" : ""}</span>
             </button>
           )
         })}

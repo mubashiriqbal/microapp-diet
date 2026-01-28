@@ -77,13 +77,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: theme.spacing.lg,
+    paddingTop: theme.spacing.xl + 12,
     backgroundColor: theme.colors.bg
   },
   logo: {
     fontSize: 20,
     fontWeight: "700",
     color: theme.colors.text,
-    marginTop: theme.spacing.xl,
+    marginTop: 0,
     marginBottom: 6,
     fontFamily: theme.font.heading
   },

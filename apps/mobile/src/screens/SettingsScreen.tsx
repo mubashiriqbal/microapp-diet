@@ -2,8 +2,8 @@ import { useContext, useEffect, useState } from "react"
 import { View, Text, TextInput, StyleSheet, Pressable, Switch, ScrollView, Image } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { Picker } from "@react-native-picker/picker"
+import Slider from "@react-native-community/slider"
 import * as ImagePicker from "expo-image-picker"
-import * as Notifications from "expo-notifications"
 import { fetchPrefs, fetchProfile, saveProfile, updatePrefs } from "../api/client"
 import {
   clearAuth,
@@ -16,30 +16,9 @@ import {
   setProfilePrefs,
   setUserPrefs
 } from "../storage/cache"
-import type {
-  ActivityEntry,
-  Plan,
-  TrackingGoals,
-  UserPrefs,
-  UserProfile,
-  WeightEntry
-} from "@wimf/shared"
+import type { UserPrefs, UserProfile } from "@wimf/shared"
 import { theme } from "../theme"
 import { AuthContext } from "../auth"
-import {
-  addActivity,
-  addWeight,
-  getActivities,
-  getActivePlanId,
-  getGoals,
-  getPlans,
-  getReminders,
-  getWeights,
-  setActivePlan,
-  setGoals,
-  setPlans,
-  setReminders
-} from "../storage/tracking"
 
 const emptyPrefs: UserPrefs = {
   userId: "unknown",
@@ -54,42 +33,38 @@ const emptyPrefs: UserPrefs = {
   sensitiveStomach: false
 }
 
-const toNumberOrNull = (value: string) => {
-  const trimmed = value.trim()
-  if (!trimmed) return null
-  const parsed = Number(trimmed)
-  return Number.isFinite(parsed) ? parsed : null
-}
+const countryOptions = ["United States", "United Kingdom", "Pakistan", "United Arab Emirates", "Saudi Arabia", "Canada", "Australia"]
+const countryCodes = ["+1", "+44", "+92", "+971", "+966", "+61"]
 
-const dietaryToggles = [
-  { key: "halal", label: "Halal" },
-  { key: "kosher", label: "Kosher" },
-  { key: "vegetarian", label: "Vegetarian" },
-  { key: "vegan", label: "Vegan" },
-  { key: "pescatarian", label: "Pescatarian" },
-  { key: "keto", label: "Keto" },
-  { key: "low_carb", label: "Low Carb" },
-  { key: "low_sodium", label: "Low Sodium" },
-  { key: "low_sugar", label: "Low Sugar" },
-  { key: "high_protein", label: "High Protein" },
-  { key: "gluten_free", label: "Gluten-Free" },
-  { key: "dairy_free", label: "Dairy-Free" }
+const dietaryOptions = [
+  { key: "halal", label: "Halal", icon: "checkmark-circle", color: "#1ABC9C" },
+  { key: "kosher", label: "Kosher", icon: "shield-checkmark", color: "#2C7BE5" },
+  { key: "vegetarian", label: "Vegetarian", icon: "leaf", color: "#22C55E" },
+  { key: "vegan", label: "Vegan", icon: "leaf-outline", color: "#16A34A" },
+  { key: "pescatarian", label: "Pescatarian", icon: "fish", color: "#3B82F6" },
+  { key: "keto", label: "Keto", icon: "flame", color: "#F97316" },
+  { key: "low_carb", label: "Low Carb", icon: "speedometer", color: "#14B8A6" },
+  { key: "low_sodium", label: "Low Sodium", icon: "water", color: "#0EA5E9" },
+  { key: "low_sugar", label: "Low Sugar", icon: "fitness", color: "#E11D48" },
+  { key: "high_protein", label: "High Protein", icon: "barbell", color: "#2563EB" },
+  { key: "gluten_free", label: "Gluten-Free", icon: "ban", color: "#F59E0B" },
+  { key: "dairy_free", label: "Dairy-Free", icon: "nutrition", color: "#8B5CF6" }
 ]
 
-const allergyChecks = [
-  { key: "peanuts", label: "Peanuts" },
-  { key: "tree_nuts", label: "Tree Nuts" },
-  { key: "dairy", label: "Dairy" },
-  { key: "eggs", label: "Eggs" },
-  { key: "shellfish", label: "Shellfish" },
-  { key: "fish", label: "Fish" },
-  { key: "soy", label: "Soy" },
-  { key: "wheat_gluten", label: "Wheat / Gluten" },
-  { key: "sesame", label: "Sesame" },
-  { key: "sulfites", label: "Sulfites" }
+const allergyOptions = [
+  { key: "peanuts", label: "Peanuts", icon: "warning", color: "#E63946" },
+  { key: "tree_nuts", label: "Tree Nuts", icon: "leaf", color: "#B45309" },
+  { key: "dairy", label: "Dairy", icon: "cafe", color: "#2563EB" },
+  { key: "eggs", label: "Eggs", icon: "nutrition", color: "#F59E0B" },
+  { key: "shellfish", label: "Shellfish", icon: "fish", color: "#EF4444" },
+  { key: "fish", label: "Fish", icon: "fish-outline", color: "#3B82F6" },
+  { key: "soy", label: "Soy", icon: "leaf-outline", color: "#22C55E" },
+  { key: "wheat_gluten", label: "Wheat / Gluten", icon: "pizza", color: "#F97316" },
+  { key: "sesame", label: "Sesame", icon: "nutrition-outline", color: "#F59E0B" },
+  { key: "sulfites", label: "Sulfites", icon: "alert", color: "#EF4444" }
 ]
 
-const alertToggles = [
+const alertOptions = [
   { key: "highRisk", label: "High-Risk Ingredients" },
   { key: "allergenDetected", label: "Allergen Detected" },
   { key: "nonCompliant", label: "Non-Compliant Food" },
@@ -100,24 +75,45 @@ const alertToggles = [
   { key: "sms", label: "SMS Alerts" }
 ]
 
-const sensitivityToggles = [
+const sensitivityOptions = [
   { key: "hypertension", label: "Hypertension-friendly" },
   { key: "diabetic", label: "Diabetic-friendly" },
   { key: "heartHealthy", label: "Heart-healthy" },
   { key: "weightLoss", label: "Weight-loss focused" }
 ]
 
+const toNumberOrNull = (value: string) => {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const getDefaultCountry = () => {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale
+    if (locale.includes("PK")) return "Pakistan"
+    if (locale.includes("AE")) return "United Arab Emirates"
+    if (locale.includes("SA")) return "Saudi Arabia"
+    if (locale.includes("GB")) return "United Kingdom"
+  } catch {
+    // ignore
+  }
+  return "United States"
+}
+
 export default function SettingsScreen() {
   const { setIsAuthed } = useContext(AuthContext)
   const [profile, setProfileState] = useState<UserProfile | null>(null)
   const [countryCode, setCountryCode] = useState("+1")
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [profilePrefs, setProfilePrefsState] = useState({
-    photoUri: null,
+  const [profilePrefs, setProfilePrefsState] = useState(() => ({
+    photoUri: null as string | null,
     dob: "",
-    country: "",
-    dietary: {},
-    allergies: {},
+    country: getDefaultCountry(),
+    dietaryOther: "",
+    dietary: {} as Record<string, boolean>,
+    allergies: {} as Record<string, boolean>,
     allergyOther: "",
     alerts: {
       highRisk: true,
@@ -136,24 +132,71 @@ export default function SettingsScreen() {
       weightLoss: false
     },
     scoring: { allergies: 70, dietary: 60, processing: 40, strictMode: true }
-  })
+  }))
   const [prefs, setPrefs] = useState<UserPrefs>(emptyPrefs)
-  const [goals, setGoalsState] = useState<TrackingGoals>({
-    caloriesTarget: 2000,
-    proteinTarget: 80,
-    sodiumLimit: 2000,
-    sugarLimit: 50
-  })
-  const [plans, setPlansState] = useState<Plan[]>([])
-  const [activePlanId, setActivePlanIdState] = useState<string | null>(null)
-  const [planName, setPlanName] = useState("")
-  const [reminders, setRemindersState] = useState({ enabled: false, times: [] as string[] })
-  const [reminderInput, setReminderInput] = useState("")
-  const [weights, setWeightsState] = useState<WeightEntry[]>([])
-  const [weightInput, setWeightInput] = useState("")
-  const [activities, setActivitiesState] = useState<ActivityEntry[]>([])
-  const [activityInput, setActivityInput] = useState("")
   const [status, setStatus] = useState("")
+
+  useEffect(() => {
+    const load = async () => {
+      const cachedProfile = await getProfile()
+      if (cachedProfile) {
+        setProfileState(cachedProfile)
+        if (cachedProfile.mobileNumber) {
+          const match = cachedProfile.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
+          if (match) {
+            setCountryCode(match[1])
+            setPhoneNumber(match[2])
+          } else {
+            setPhoneNumber(cachedProfile.mobileNumber)
+          }
+        }
+      }
+      const cachedPrefs = await getUserPrefs()
+      if (cachedPrefs) {
+        setPrefs({ ...emptyPrefs, ...cachedPrefs })
+      }
+
+      try {
+        const profileData = await fetchProfile()
+        setProfileState(profileData)
+        setProfile(profileData)
+        if (profileData.mobileNumber) {
+          const match = profileData.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
+          if (match) {
+            setCountryCode(match[1])
+            setPhoneNumber(match[2])
+          } else {
+            setPhoneNumber(profileData.mobileNumber)
+          }
+        }
+        const remotePrefs = await fetchPrefs(profileData.id)
+        setPrefs({ ...emptyPrefs, ...remotePrefs })
+        setUserPrefs(remotePrefs)
+      } catch {
+        // keep cached values
+      }
+
+      const storedHealth = await getHealthPrefs()
+      const storedProfilePrefs = await getProfilePrefs()
+      setProfilePrefsState((prev) => ({
+        ...prev,
+        ...storedProfilePrefs,
+        country: storedProfilePrefs.country || prev.country,
+        dietaryOther: storedProfilePrefs.dietaryOther || "",
+        allergyOther: storedProfilePrefs.allergyOther ?? storedHealth.allergyOther ?? "",
+        dietary: {
+          ...storedProfilePrefs.dietary,
+          ...Object.fromEntries(storedHealth.restrictions.map((item) => [item, true]))
+        },
+        allergies: {
+          ...storedProfilePrefs.allergies,
+          ...Object.fromEntries(storedHealth.allergens.map((item) => [item, true]))
+        }
+      }))
+    }
+
+    load()
+  }, [])
 
   const setDietaryToggle = (key: string, value: boolean) => {
     setProfilePrefsState((prev) => ({
@@ -200,89 +243,19 @@ export default function SettingsScreen() {
     }
   }
 
-  useEffect(() => {
-    const load = async () => {
-      const cachedProfile = await getProfile()
-      if (cachedProfile) {
-        setProfileState(cachedProfile)
-        if (cachedProfile.mobileNumber) {
-          const match = cachedProfile.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
-          if (match) {
-            setCountryCode(match[1])
-            setPhoneNumber(match[2])
-          } else {
-            setPhoneNumber(cachedProfile.mobileNumber)
-          }
-        }
-      }
-      const cached = await getUserPrefs()
-      if (cached) {
-        setPrefs({ ...emptyPrefs, ...cached })
-      }
-      try {
-        const profileData = await fetchProfile()
-        setProfileState(profileData)
-        setProfile(profileData)
-        if (profileData.mobileNumber) {
-          const match = profileData.mobileNumber.match(/^(\+\d+)\s*(.*)$/)
-          if (match) {
-            setCountryCode(match[1])
-            setPhoneNumber(match[2])
-          } else {
-            setPhoneNumber(profileData.mobileNumber)
-          }
-        }
-        const [remotePrefs] = await Promise.all([fetchPrefs(profileData.id)])
-        setPrefs({ ...emptyPrefs, ...remotePrefs })
-        setUserPrefs(remotePrefs)
-      } catch {
-        // keep cached values
-      }
-
-      const [storedGoals, storedPlans, storedActivePlan, storedReminders, storedWeights, storedActivities] =
-        await Promise.all([
-          getGoals(),
-          getPlans(),
-          getActivePlanId(),
-          getReminders(),
-          getWeights(),
-          getActivities()
-        ])
-      setGoalsState(storedGoals)
-      setPlansState(storedPlans)
-      setActivePlanIdState(storedActivePlan)
-      setRemindersState(storedReminders)
-      setWeightsState(storedWeights)
-      setActivitiesState(storedActivities)
-
-      const storedHealth = await getHealthPrefs()
-      const storedProfilePrefs = await getProfilePrefs()
-      setProfilePrefsState((prev) => ({
-        ...prev,
-        ...storedProfilePrefs,
-        allergyOther: storedProfilePrefs.allergyOther ?? storedHealth.allergyOther ?? "",
-        dietary: {
-          ...storedProfilePrefs.dietary,
-          ...Object.fromEntries(storedHealth.restrictions.map((item) => [item, true]))
-        },
-        allergies: {
-          ...storedProfilePrefs.allergies,
-          ...Object.fromEntries(storedHealth.allergens.map((item) => [item, true]))
-        }
-      }))
-    }
-
-    load()
-  }, [])
-
   const handleSave = async () => {
     setStatus("Saving...")
     try {
       if (profile) {
-        const savedProfile = await saveProfile(profile)
+        const payload = {
+          ...profile,
+          mobileNumber: `${countryCode} ${phoneNumber}`.trim()
+        }
+        const savedProfile = await saveProfile(payload)
         setProfileState(savedProfile)
         await setProfile(savedProfile)
       }
+
       const nextPrefs = {
         ...prefs,
         halalCheckEnabled: !!profilePrefs.dietary?.halal,
@@ -292,9 +265,13 @@ export default function SettingsScreen() {
       const saved = await updatePrefs(nextPrefs)
       setPrefs(saved)
       await setUserPrefs(saved)
+
       const restrictions = Object.entries(profilePrefs.dietary || {})
         .filter(([, value]) => value)
         .map(([key]) => key)
+      if (profilePrefs.dietaryOther?.trim()) {
+        restrictions.push(profilePrefs.dietaryOther.trim())
+      }
       const allergens = Object.entries(profilePrefs.allergies || {})
         .filter(([, value]) => value)
         .map(([key]) => key)
@@ -303,125 +280,18 @@ export default function SettingsScreen() {
       setStatus("Saved")
     } catch {
       setStatus("Saved locally.")
-      const nextPrefs = {
-        ...prefs,
-        halalCheckEnabled: !!profilePrefs.dietary?.halal,
-        vegetarian: !!profilePrefs.dietary?.vegetarian,
-        vegan: !!profilePrefs.dietary?.vegan
-      }
-      setPrefs(nextPrefs)
-      await setUserPrefs(nextPrefs)
       const restrictions = Object.entries(profilePrefs.dietary || {})
         .filter(([, value]) => value)
         .map(([key]) => key)
+      if (profilePrefs.dietaryOther?.trim()) {
+        restrictions.push(profilePrefs.dietaryOther.trim())
+      }
       const allergens = Object.entries(profilePrefs.allergies || {})
         .filter(([, value]) => value)
         .map(([key]) => key)
       await setHealthPrefs({ restrictions, allergens, allergyOther: profilePrefs.allergyOther || "" })
       await setProfilePrefs(profilePrefs)
     }
-  }
-
-  const handleGoalsSave = async () => {
-    await setGoals(goals)
-    setStatus("Goals saved locally.")
-  }
-
-  const handleCreatePlan = async () => {
-    if (!planName.trim()) {
-      setStatus("Enter a plan name.")
-      return
-    }
-    const newPlan = {
-      id: `${Date.now()}`,
-      name: planName.trim(),
-      createdAt: new Date().toISOString(),
-      goals
-    }
-    const updated = [...plans, newPlan]
-    await setPlans(updated)
-    setPlansState(updated)
-    setPlanName("")
-    setStatus("Plan created.")
-  }
-
-  const handleActivatePlan = async (planId: string) => {
-    await setActivePlan(planId)
-    setActivePlanIdState(planId)
-    const plan = plans.find((item) => item.id === planId)
-    if (plan) {
-      setGoalsState(plan.goals)
-      await setGoals(plan.goals)
-      setStatus("Plan activated.")
-    }
-  }
-
-  const handleReminderSave = async () => {
-    await setReminders(reminders)
-    if (reminders.enabled) {
-      await Notifications.requestPermissionsAsync()
-      await Notifications.cancelAllScheduledNotificationsAsync()
-      await Promise.all(
-        reminders.times.map((time) => {
-          const [hour, minute] = time.split(":").map((value) => Number(value))
-          if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Promise.resolve()
-          return Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Meal reminder",
-              body: "Log your meal. Educational only."
-            },
-            trigger: { hour, minute, repeats: true }
-          })
-        })
-      )
-    } else {
-      await Notifications.cancelAllScheduledNotificationsAsync()
-    }
-    setStatus("Reminders saved locally.")
-  }
-
-  const handleAddReminderTime = () => {
-    const trimmed = reminderInput.trim()
-    if (!trimmed) return
-    if (!reminders.times.includes(trimmed)) {
-      setRemindersState((prev) => ({ ...prev, times: [...prev.times, trimmed] }))
-    }
-    setReminderInput("")
-  }
-
-  const handleRemoveReminderTime = (time: string) => {
-    setRemindersState((prev) => ({
-      ...prev,
-      times: prev.times.filter((item) => item !== time)
-    }))
-  }
-
-  const handleAddWeight = () => {
-    const value = Number(weightInput)
-    if (!Number.isFinite(value)) {
-      setStatus("Enter a valid weight.")
-      return
-    }
-    const entry = { id: `${Date.now()}`, date: new Date().toISOString().slice(0, 10), weightKg: value }
-    addWeight(entry).then((updated) => {
-      setWeightsState(updated)
-      setWeightInput("")
-      setStatus("Weight logged.")
-    })
-  }
-
-  const handleAddActivity = () => {
-    const value = Number(activityInput)
-    if (!Number.isFinite(value)) {
-      setStatus("Enter valid calories.")
-      return
-    }
-    const entry = { id: `${Date.now()}`, date: new Date().toISOString().slice(0, 10), caloriesBurned: value }
-    addActivity(entry).then((updated) => {
-      setActivitiesState(updated)
-      setActivityInput("")
-      setStatus("Activity logged.")
-    })
   }
 
   const handleLogout = async () => {
@@ -450,6 +320,7 @@ export default function SettingsScreen() {
               <Text style={styles.photoButtonText}>Upload photo</Text>
             </Pressable>
           </View>
+
           <Text style={styles.label}>Full name</Text>
           <TextInput
             style={styles.input}
@@ -458,18 +329,29 @@ export default function SettingsScreen() {
             placeholder="Full name"
             placeholderTextColor={theme.colors.muted}
           />
-          <Text style={styles.label}>Mobile number</Text>
+
+          <Text style={styles.label}>Email address</Text>
+          <TextInput
+            style={styles.input}
+            value={profile.email ?? ""}
+            editable={false}
+          />
+
+          <Text style={styles.label}>Phone number</Text>
           <View style={styles.phoneRow}>
-            <TextInput
-              style={styles.codeInput}
-              value={countryCode}
-              onChangeText={(value) => {
-                setCountryCode(value)
-                setProfileState({ ...profile, mobileNumber: `${value} ${phoneNumber}`.trim() })
-              }}
-              placeholder="+1"
-              placeholderTextColor={theme.colors.muted}
-            />
+            <View style={styles.codePickerWrap}>
+              <Picker
+                selectedValue={countryCode}
+                onValueChange={(value) => {
+                  setCountryCode(value)
+                  setProfileState({ ...profile, mobileNumber: `${value} ${phoneNumber}`.trim() })
+                }}
+              >
+                {countryCodes.map((code) => (
+                  <Picker.Item key={code} label={code} value={code} />
+                ))}
+              </Picker>
+            </View>
             <TextInput
               style={styles.phoneInput}
               value={phoneNumber}
@@ -482,20 +364,7 @@ export default function SettingsScreen() {
               keyboardType="phone-pad"
             />
           </View>
-          <Text style={styles.label}>Age</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={profile.age?.toString() || ""}
-            onChangeText={(value) =>
-              setProfileState({
-                ...profile,
-                age: toNumberOrNull(value) ?? undefined
-              })
-            }
-            placeholder="Age"
-            placeholderTextColor={theme.colors.muted}
-          />
+
           <Text style={styles.label}>Date of birth</Text>
           <TextInput
             style={styles.input}
@@ -504,92 +373,105 @@ export default function SettingsScreen() {
             placeholder="YYYY-MM-DD"
             placeholderTextColor={theme.colors.muted}
           />
+
           <Text style={styles.label}>Country</Text>
-          <TextInput
-            style={styles.input}
-            value={profilePrefs.country ?? ""}
-            onChangeText={(value) => setProfilePrefsState((prev) => ({ ...prev, country: value }))}
-            placeholder="Country"
-            placeholderTextColor={theme.colors.muted}
-          />
-          <Text style={styles.label}>Height (cm)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={profile.heightCm?.toString() || ""}
-            onChangeText={(value) =>
-              setProfileState({
-                ...profile,
-                heightCm: toNumberOrNull(value) ?? undefined
-              })
-            }
-            placeholder="Height in cm"
-            placeholderTextColor={theme.colors.muted}
-          />
-          <Text style={styles.label}>Weight (kg)</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="numeric"
-            value={profile.weightKg?.toString() || ""}
-            onChangeText={(value) =>
-              setProfileState({
-                ...profile,
-                weightKg: toNumberOrNull(value) ?? undefined
-              })
-            }
-            placeholder="Weight in kg"
-            placeholderTextColor={theme.colors.muted}
-          />
+          <View style={styles.pickerWrap}>
+            <Picker
+              selectedValue={profilePrefs.country ?? getDefaultCountry()}
+              onValueChange={(value) =>
+                setProfilePrefsState((prev) => ({ ...prev, country: value }))
+              }
+            >
+              {countryOptions.map((country) => (
+                <Picker.Item key={country} label={country} value={country} />
+              ))}
+            </Picker>
+          </View>
+
           <Text style={styles.label}>Gender</Text>
           <View style={styles.pickerWrap}>
             <Picker
-              selectedValue={profile.gender ?? "other"}
+              selectedValue={profile.gender ?? ""}
               onValueChange={(value) =>
                 setProfileState({ ...profile, gender: value as UserProfile["gender"] })
               }
             >
+              <Picker.Item label="Select" value="" />
               <Picker.Item label="Male" value="male" />
               <Picker.Item label="Female" value="female" />
               <Picker.Item label="Other" value="other" />
             </Picker>
           </View>
 
+          <Text style={styles.label}>Height (cm)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={profile.heightCm?.toString() || ""}
+            onChangeText={(value) =>
+              setProfileState({ ...profile, heightCm: toNumberOrNull(value) ?? undefined })
+            }
+            placeholder="Height in cm"
+            placeholderTextColor={theme.colors.muted}
+          />
+
+          <Text style={styles.label}>Weight (kg)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={profile.weightKg?.toString() || ""}
+            onChangeText={(value) =>
+              setProfileState({ ...profile, weightKg: toNumberOrNull(value) ?? undefined })
+            }
+            placeholder="Weight in kg"
+            placeholderTextColor={theme.colors.muted}
+          />
+
           <Text style={styles.label}>Activity level</Text>
           <View style={styles.pickerWrap}>
             <Picker
-              selectedValue={profile.activityLevel ?? "moderate"}
+              selectedValue={profile.activityLevel ?? ""}
               onValueChange={(value) =>
                 setProfileState({ ...profile, activityLevel: value as UserProfile["activityLevel"] })
               }
             >
+              <Picker.Item label="Select" value="" />
               <Picker.Item label="Sedentary" value="sedentary" />
               <Picker.Item label="Light" value="light" />
               <Picker.Item label="Moderate" value="moderate" />
               <Picker.Item label="Active" value="active" />
             </Picker>
           </View>
-
-          <Text style={styles.label}>Daily calorie goal</Text>
-          <Text style={styles.readonly}>{profile.dailyCalorieGoal ?? 2000} kcal</Text>
         </View>
       )}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Dietary restrictions</Text>
-        {dietaryToggles.map((item) => (
-          <View key={item.key} style={styles.switchRow}>
-            <Text style={styles.label}>{item.label}</Text>
+        {dietaryOptions.map((item) => (
+          <View key={item.key} style={styles.toggleRow}>
+            <View style={styles.toggleLabel}>
+              <Ionicons name={item.icon as any} size={16} color={item.color} />
+              <Text style={styles.toggleText}>{item.label}</Text>
+            </View>
             <Switch
               value={!!profilePrefs.dietary?.[item.key]}
               onValueChange={(value) => setDietaryToggle(item.key, value)}
             />
           </View>
         ))}
+        <Text style={styles.label}>Other (custom)</Text>
+        <TextInput
+          style={styles.input}
+          value={profilePrefs.dietaryOther ?? ""}
+          onChangeText={(value) => setProfilePrefsState((prev) => ({ ...prev, dietaryOther: value }))}
+          placeholder="Add custom restriction"
+          placeholderTextColor={theme.colors.muted}
+        />
       </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Allergies & intolerances</Text>
-        {allergyChecks.map((item) => (
+        {allergyOptions.map((item) => (
           <Pressable
             key={item.key}
             style={styles.checkRow}
@@ -598,8 +480,9 @@ export default function SettingsScreen() {
             <Ionicons
               name={profilePrefs.allergies?.[item.key] ? "checkbox" : "square-outline"}
               size={20}
-              color={profilePrefs.allergies?.[item.key] ? theme.colors.danger : theme.colors.muted}
+              color={profilePrefs.allergies?.[item.key] ? theme.colors.warning : theme.colors.muted}
             />
+            <Ionicons name={item.icon as any} size={16} color={item.color} />
             <Text style={styles.checkLabel}>{item.label}</Text>
           </Pressable>
         ))}
@@ -614,143 +497,10 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Goals & limits</Text>
-        <Text style={styles.label}>Daily calories</Text>
-        <TextInput
-          style={styles.input}
-          value={goals.caloriesTarget.toString()}
-          onChangeText={(value) =>
-            setGoalsState((prev) => ({ ...prev, caloriesTarget: Number(value) || 0 }))
-          }
-          keyboardType="numeric"
-        />
-        <Pressable style={styles.primaryButton} onPress={handleGoalsSave}>
-          <Text style={styles.primaryButtonText}>Save goals</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Plans</Text>
-        <TextInput
-          style={styles.input}
-          value={planName}
-          onChangeText={setPlanName}
-          placeholder="Plan name"
-          placeholderTextColor={theme.colors.muted}
-        />
-        <Pressable style={styles.primaryButton} onPress={handleCreatePlan}>
-          <Text style={styles.primaryButtonText}>Create plan</Text>
-        </Pressable>
-        {plans.map((plan) => (
-          <View key={plan.id} style={styles.planRow}>
-            <Text style={styles.label}>{plan.name}</Text>
-            <Pressable
-              style={styles.planButton}
-              onPress={() => handleActivatePlan(plan.id)}
-            >
-              <Text style={styles.planButtonText}>
-                {activePlanId === plan.id ? "Active" : "Activate"}
-              </Text>
-            </Pressable>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Reminders</Text>
-        <View style={styles.reminderHeader}>
-          <View>
-            <Text style={styles.label}>Meal reminders</Text>
-            <Text style={styles.helperText}>Choose times to nudge meal logging.</Text>
-          </View>
-          <Switch
-            value={reminders.enabled}
-            onValueChange={(value) =>
-              setRemindersState((prev) => ({ ...prev, enabled: value }))
-            }
-          />
-        </View>
-
-        <View style={styles.reminderInputRow}>
-          <TextInput
-            style={styles.reminderInput}
-            value={reminderInput}
-            onChangeText={setReminderInput}
-            placeholder="Add time (e.g., 08:00)"
-            placeholderTextColor={theme.colors.muted}
-          />
-          <Pressable style={styles.addTimeButton} onPress={handleAddReminderTime}>
-            <Text style={styles.addTimeText}>Add</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.reminderChips}>
-          {reminders.times.length === 0 ? (
-            <Text style={styles.bodyMuted}>No reminder times yet.</Text>
-          ) : (
-            reminders.times.map((time) => (
-              <Pressable
-                key={time}
-                style={styles.reminderChip}
-                onPress={() => handleRemoveReminderTime(time)}
-              >
-                <Text style={styles.reminderChipText}>{time}</Text>
-                <Ionicons name="close" size={14} color={theme.colors.muted} />
-              </Pressable>
-            ))
-          )}
-        </View>
-
-        <Pressable style={styles.primaryButton} onPress={handleReminderSave}>
-          <Text style={styles.primaryButtonText}>Save reminders</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Weight</Text>
-        <TextInput
-          style={styles.input}
-          value={weightInput}
-          onChangeText={setWeightInput}
-          placeholder="Weight (kg)"
-          placeholderTextColor={theme.colors.muted}
-          keyboardType="numeric"
-        />
-        <Pressable style={styles.primaryButton} onPress={handleAddWeight}>
-          <Text style={styles.primaryButtonText}>Add weight</Text>
-        </Pressable>
-        {weights.slice(-30).map((entry) => (
-          <Text key={entry.id} style={styles.meta}>
-            {entry.date}: {entry.weightKg} kg
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Activity (manual)</Text>
-        <TextInput
-          style={styles.input}
-          value={activityInput}
-          onChangeText={setActivityInput}
-          placeholder="Calories burned"
-          placeholderTextColor={theme.colors.muted}
-          keyboardType="numeric"
-        />
-        <Pressable style={styles.primaryButton} onPress={handleAddActivity}>
-          <Text style={styles.primaryButtonText}>Add activity</Text>
-        </Pressable>
-        {activities.slice(-30).map((entry) => (
-          <Text key={entry.id} style={styles.meta}>
-            {entry.date}: {entry.caloriesBurned} kcal
-          </Text>
-        ))}
-      </View>
-
-      <View style={styles.card}>
         <Text style={styles.sectionTitle}>Alert preferences</Text>
-        {alertToggles.map((item) => (
-          <View key={item.key} style={styles.switchRow}>
-            <Text style={styles.label}>{item.label}</Text>
+        {alertOptions.map((item) => (
+          <View key={item.key} style={styles.toggleRow}>
+            <Text style={styles.toggleText}>{item.label}</Text>
             <Switch
               value={!!profilePrefs.alerts?.[item.key]}
               onValueChange={(value) => setAlertToggle(item.key, value)}
@@ -761,9 +511,9 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Health sensitivities</Text>
-        {sensitivityToggles.map((item) => (
-          <View key={item.key} style={styles.switchRow}>
-            <Text style={styles.label}>{item.label}</Text>
+        {sensitivityOptions.map((item) => (
+          <View key={item.key} style={styles.toggleRow}>
+            <Text style={styles.toggleText}>{item.label}</Text>
             <Switch
               value={!!profilePrefs.sensitivities?.[item.key]}
               onValueChange={(value) => setSensitivityToggle(item.key, value)}
@@ -776,28 +526,37 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Scoring preferences</Text>
         <Text style={styles.label}>Prioritize allergies</Text>
-        <TextInput
-          style={styles.input}
-          value={profilePrefs.scoring.allergies.toString()}
-          onChangeText={(value) => setScoringValue("allergies", Number(value) || 0)}
-          keyboardType="numeric"
+        <Slider
+          value={profilePrefs.scoring.allergies}
+          minimumValue={0}
+          maximumValue={100}
+          step={1}
+          minimumTrackTintColor={theme.colors.accent}
+          maximumTrackTintColor={theme.colors.border}
+          onValueChange={(value) => setScoringValue("allergies", value)}
         />
         <Text style={styles.label}>Prioritize dietary rules</Text>
-        <TextInput
-          style={styles.input}
-          value={profilePrefs.scoring.dietary.toString()}
-          onChangeText={(value) => setScoringValue("dietary", Number(value) || 0)}
-          keyboardType="numeric"
+        <Slider
+          value={profilePrefs.scoring.dietary}
+          minimumValue={0}
+          maximumValue={100}
+          step={1}
+          minimumTrackTintColor={theme.colors.accent2}
+          maximumTrackTintColor={theme.colors.border}
+          onValueChange={(value) => setScoringValue("dietary", value)}
         />
         <Text style={styles.label}>Prioritize processing level</Text>
-        <TextInput
-          style={styles.input}
-          value={profilePrefs.scoring.processing.toString()}
-          onChangeText={(value) => setScoringValue("processing", Number(value) || 0)}
-          keyboardType="numeric"
+        <Slider
+          value={profilePrefs.scoring.processing}
+          minimumValue={0}
+          maximumValue={100}
+          step={1}
+          minimumTrackTintColor={theme.colors.warning}
+          maximumTrackTintColor={theme.colors.border}
+          onValueChange={(value) => setScoringValue("processing", value)}
         />
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>Strict mode</Text>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleText}>Strict mode</Text>
           <Switch
             value={profilePrefs.scoring.strictMode}
             onValueChange={(value) =>
@@ -811,7 +570,7 @@ export default function SettingsScreen() {
       </View>
 
       <Pressable style={styles.primaryButton} onPress={handleSave}>
-        <Text style={styles.primaryButtonText}>Save</Text>
+        <Text style={styles.primaryButtonText}>Save Profile</Text>
       </Pressable>
       <Pressable style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
@@ -838,6 +597,20 @@ const styles = StyleSheet.create({
   subtitle: {
     color: theme.colors.muted,
     marginBottom: theme.spacing.md
+  },
+  card: {
+    backgroundColor: theme.colors.panel,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 12
   },
   photoRow: {
     flexDirection: "row",
@@ -874,37 +647,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700"
   },
-  card: {
-    backgroundColor: theme.colors.glass,
-    borderRadius: theme.radius.lg,
-    padding: 16,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginBottom: 12
-  },
-  planRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10
-  },
-  planButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999
-  },
-  planButtonText: {
-    color: theme.colors.text,
-    fontSize: 12
-  },
   label: {
     fontWeight: "600",
     color: theme.colors.text,
@@ -924,14 +666,13 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16
   },
-  codeInput: {
-    width: 80,
+  codePickerWrap: {
+    width: 90,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    padding: 12,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.glassStrong
+    backgroundColor: theme.colors.glassStrong,
+    overflow: "hidden"
   },
   phoneInput: {
     flex: 1,
@@ -950,15 +691,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: "hidden"
   },
-  readonly: {
-    color: theme.colors.muted,
-    marginBottom: 16
-  },
-  switchRow: {
+  toggleRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16
+    justifyContent: "space-between",
+    paddingVertical: 10
+  },
+  toggleLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  toggleText: {
+    color: theme.colors.text,
+    fontWeight: "600"
   },
   checkRow: {
     flexDirection: "row",
@@ -969,65 +715,6 @@ const styles = StyleSheet.create({
   checkLabel: {
     color: theme.colors.text,
     fontWeight: "600"
-  },
-  reminderHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12
-  },
-  helperText: {
-    color: theme.colors.muted,
-    fontSize: 12,
-    marginTop: 4
-  },
-  reminderInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12
-  },
-  reminderInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.glassStrong,
-    color: theme.colors.text
-  },
-  addTimeButton: {
-    backgroundColor: theme.colors.accent2,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999
-  },
-  addTimeText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 12
-  },
-  reminderChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12
-  },
-  reminderChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.panelAlt
-  },
-  reminderChipText: {
-    color: theme.colors.text,
-    fontSize: 12
   },
   bodyMuted: {
     color: theme.colors.muted,

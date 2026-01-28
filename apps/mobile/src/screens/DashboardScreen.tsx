@@ -1,134 +1,262 @@
-import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, Pressable, ScrollView, Share } from "react-native"
+import { useEffect, useMemo, useState } from "react"
+import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
-import { getJournalForDate, getGoals, getStreaks, getActivities } from "../storage/tracking"
+import { getJournalForDate } from "../storage/tracking"
+import {
+  getProfile,
+  getProfilePrefs,
+  getScanHistoryCache,
+  getScanImageMap
+} from "../storage/cache"
 import { theme } from "../theme"
+import ScoreRing from "../components/ScoreRing"
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
 export default function DashboardScreen() {
   const navigation = useNavigation()
   const [date] = useState(todayKey())
+  const [name, setName] = useState("there")
+  const [photoUri, setPhotoUri] = useState<string | null>(null)
+  const [profilePrefs, setProfilePrefs] = useState({
+    dietary: {} as Record<string, boolean>,
+    allergies: {} as Record<string, boolean>
+  })
   const [totals, setTotals] = useState({
     calories: 0,
     missingNutritionCount: 0,
     itemsCount: 0
   })
-  const [goals, setGoals] = useState({
-    caloriesTarget: 2000,
-    proteinTarget: 0,
-    sodiumLimit: 0,
-    sugarLimit: 0
-  })
-  const [streaks, setStreaks] = useState({ current: 0, longest: 0 })
-  const [activityCalories, setActivityCalories] = useState(0)
+  const [history, setHistory] = useState<Array<any>>([])
+  const [imageMap, setImageMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const load = async () => {
+      const profile = await getProfile()
+      if (profile?.fullName) {
+        setName(profile.fullName.split(" ")[0])
+      } else if (profile?.email) {
+        setName(profile.email.split("@")[0])
+      }
+      const profilePrefs = await getProfilePrefs()
+      setPhotoUri(profilePrefs.photoUri || null)
+      setProfilePrefs({
+        dietary: profilePrefs.dietary || {},
+        allergies: profilePrefs.allergies || {}
+      })
       const log = await getJournalForDate(date)
-      const goal = await getGoals()
-      const streak = await getStreaks()
-      const activity = await getActivities()
-      const todayActivity = activity
-        .filter((entry) => entry.date === date)
-        .reduce((sum, entry) => sum + entry.caloriesBurned, 0)
-
+      const cachedHistory = await getScanHistoryCache()
+      const cachedImages = await getScanImageMap()
+      setHistory(cachedHistory)
+      setImageMap(cachedImages)
       setTotals({
         calories: log.totals.calories,
         missingNutritionCount: log.missingNutritionCount,
         itemsCount: log.items.length
       })
-      setGoals(goal)
-      setStreaks(streak)
-      setActivityCalories(Math.round(todayActivity))
     }
 
     load()
   }, [date])
 
-  const handleShare = async () => {
-    const text = [
-      "Today summary (educational only):",
-      `Calories: ${totals.calories}/${goals.caloriesTarget}`,
-      `Meals logged: ${totals.itemsCount}`,
-      `Activity calories: ${activityCalories} kcal`,
-      "Educational, not medical advice."
-    ].join("\n")
+  const averageScore = useMemo(() => {
+    const scores = history
+      .map((item) => item.analysisSnapshot?.score?.value)
+      .filter((value: number | undefined) => typeof value === "number")
+    if (!scores.length) return 0
+    return Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length)
+  }, [history])
 
-    await Share.share({ message: text })
-  }
+  const todayFoods = totals.itemsCount
 
-  const percent = (value: number, target: number) =>
-    target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0
+  const unhealthyCount = useMemo(() => {
+    const today = new Date(date)
+    return history.filter((item) => {
+      const createdAt = new Date(item.createdAt)
+      if (createdAt.toDateString() !== today.toDateString()) return false
+      return (item.analysisSnapshot?.score?.value || 0) < 40
+    }).length
+  }, [date, history])
+
+  const allergenAlerts = useMemo(() => {
+    const ingredientMatches = (ingredients: string[], allergyKey: string) => {
+      const lower = ingredients.map((item) => item.toLowerCase())
+      const matchers: Record<string, string[]> = {
+        peanuts: ["peanut"],
+        tree_nuts: ["almond", "walnut", "pecan", "cashew", "nut"],
+        dairy: ["milk", "cheese", "butter", "cream", "whey", "yogurt"],
+        eggs: ["egg"],
+        shellfish: ["shrimp", "crab", "lobster", "shellfish"],
+        fish: ["fish", "salmon", "tuna", "cod"],
+        soy: ["soy", "soya"],
+        wheat_gluten: ["wheat", "gluten", "barley", "rye"],
+        sesame: ["sesame"],
+        sulfites: ["sulfite", "sulphite"]
+      }
+      const tokens = matchers[allergyKey] || [allergyKey]
+      return tokens.some((token) => lower.some((item) => item.includes(token)))
+    }
+
+    const selected = Object.keys(profilePrefs.allergies).filter((key) => profilePrefs.allergies[key])
+    if (!selected.length) return 0
+    return history.filter((entry) => {
+      const ingredients = entry.analysisSnapshot?.ingredientBreakdown?.map((item: any) => item.name) || []
+      return selected.some((allergy) => ingredientMatches(ingredients, allergy))
+    }).length
+  }, [history, profilePrefs.allergies])
+
+  const recentScans = history.slice(0, 2)
+  const popularScans = history.slice(0, 3)
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.glowTop} />
       <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>Today</Text>
-          <Text style={styles.subtitle}>Track your day in seconds.</Text>
-        </View>
-        <View style={styles.streakPill}>
-          <Text style={styles.streakLabel}>Streak</Text>
-          <Text style={styles.streakValue}>{streaks.current}d</Text>
-        </View>
-      </View>
-
-      <View style={[styles.glassCard, styles.heroCard]}>
-        <Text style={styles.cardLabel}>Calories</Text>
-        <Text style={styles.heroValue}>{totals.calories}</Text>
-        <Text style={styles.heroMeta}>
-          of {goals.caloriesTarget} kcal target
-        </Text>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${percent(totals.calories, goals.caloriesTarget)}%` }
-            ]}
-          />
-        </View>
-        <Text style={styles.cardMeta}>
-          {totals.calories >= goals.caloriesTarget ? "Limit reached" : "Within your limit"}
-        </Text>
-      </View>
-
-      <View style={styles.cardGrid}>
-        <View style={styles.glassTile}>
-          <Text style={styles.cardLabel}>Meals logged</Text>
-          <Text style={styles.tileValue}>{totals.itemsCount}</Text>
-        </View>
-        <View style={styles.glassTile}>
-          <Text style={styles.cardLabel}>Activity</Text>
-          <Text style={styles.tileValue}>{activityCalories} kcal</Text>
-        </View>
-        <View style={styles.glassTile}>
-          <Text style={styles.cardLabel}>Longest streak</Text>
-          <Text style={styles.tileValue}>{streaks.longest} days</Text>
-        </View>
-        <View style={styles.glassTile}>
-          <Text style={styles.cardLabel}>Missing nutrition</Text>
-          <Text style={styles.tileValue}>{totals.missingNutritionCount}</Text>
+        <Text style={styles.headerTitle}>Dashboard</Text>
+        <View style={styles.avatar}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatarPlaceholder} />
+          )}
         </View>
       </View>
 
-      {totals.missingNutritionCount > 0 && (
-        <Text style={styles.notice}>
-          Some items are missing nutrition. Totals may be incomplete.
+      <View style={styles.welcomeCard}>
+        <Text style={styles.welcomeText}>
+          Welcome back <Text style={styles.welcomeName}> {name}</Text>
         </Text>
-      )}
+      </View>
 
-      <View style={styles.actions}>
-        <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Journal" as never)}>
-          <Text style={styles.primaryButtonText}>Log a meal</Text>
-        </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={handleShare}>
-          <Text style={styles.secondaryButtonText}>Share today</Text>
+      <View style={styles.scoreCard}>
+        <View style={styles.scoreHeader}>
+          <View style={styles.scoreInfo}>
+            <Text style={styles.sectionLabel}>Avg. Health Score</Text>
+            <Text style={styles.scoreValue}>
+              {averageScore} <Text style={styles.scoreMuted}>/ 100</Text>
+            </Text>
+          </View>
+          <ScoreRing value={averageScore} size={140} strokeWidth={12} />
+        </View>
+        <View style={styles.scoreStats}>
+          <View style={styles.statRow}>
+            <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
+            <Text style={styles.statText}>Today's foods</Text>
+            <Text style={styles.statValue}>{todayFoods}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <Ionicons name="alert-circle" size={16} color={theme.colors.warning} />
+            <Text style={styles.statText}>Allergens</Text>
+            <Text style={styles.statValue}>{allergenAlerts}</Text>
+          </View>
+          <View style={styles.statRow}>
+            <Ionicons name="warning" size={16} color={theme.colors.warning} />
+            <Text style={styles.statText}>Unhealthy items</Text>
+            <Text style={styles.statValue}>{unhealthyCount}</Text>
+          </View>
+        </View>
+        <Pressable style={styles.viewJournal} onPress={() => navigation.navigate("Journal" as never)}>
+          <Ionicons name="book-outline" size={16} color="#ffffff" />
+          <Text style={styles.viewJournalText}>View Journal</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.disclaimer}>Educational, not medical advice.</Text>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Dietary Preferences + Alerts</Text>
+        <View style={styles.chipRow}>
+          {Object.entries(profilePrefs.dietary)
+            .filter(([, value]) => value)
+            .slice(0, 3)
+            .map(([key]) => (
+              <View key={key} style={styles.chip}>
+                <Text style={styles.chipText}>{key.replace(/_/g, " ")}</Text>
+              </View>
+            ))}
+          {Object.entries(profilePrefs.allergies)
+            .filter(([, value]) => value)
+            .slice(0, 2)
+            .map(([key]) => (
+              <View key={key} style={styles.chip}>
+                <Text style={styles.chipText}>{key.replace(/_/g, " ")}</Text>
+              </View>
+            ))}
+          {Object.values(profilePrefs.dietary).filter(Boolean).length === 0 &&
+          Object.values(profilePrefs.allergies).filter(Boolean).length === 0 ? (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>Set preferences</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <Ionicons name="shield-checkmark" size={20} color={theme.colors.accent2} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoTitle}>Learn about your preferences</Text>
+              <Text style={styles.infoBody}>
+                Used to identify key ingredients and provide personalized alerts.
+              </Text>
+            </View>
+          </View>
+          <Pressable style={styles.managePrefs} onPress={() => navigation.navigate("Settings" as never)}>
+            <Ionicons name="settings-outline" size={16} color={theme.colors.accent2} />
+            <Text style={styles.managePrefsText}>Manage Preferences</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>Recent Scans</Text>
+          <Pressable onPress={() => navigation.navigate("History" as never)}>
+            <Text style={styles.sectionLink}>View All</Text>
+          </Pressable>
+        </View>
+        {recentScans.length === 0 ? (
+          <Text style={styles.bodyMuted}>No recent scans yet.</Text>
+        ) : (
+          recentScans.map((scan) => (
+            <View key={scan.id} style={styles.scanRow}>
+              <View style={styles.scanThumb}>
+                {imageMap[scan.id] ? (
+                  <Image source={{ uri: imageMap[scan.id] }} style={styles.scanThumbImage} />
+                ) : null}
+              </View>
+              <View style={styles.scanInfo}>
+                <Text style={styles.scanTitle}>{scan.productName || "Scan"}</Text>
+                <Text style={styles.scanMeta}>Estimated serving: 1 slice</Text>
+                <View style={styles.scanTime}>
+                  <Ionicons name="time-outline" size={12} color={theme.colors.muted} />
+                  <Text style={styles.scanMeta}>
+                    {new Date(scan.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.scoreBadge}>
+                <Text style={styles.scoreBadgeText}>{scan.analysisSnapshot?.score?.value ?? "-"}</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Popular Scans Today</Text>
+        <View style={styles.popularRow}>
+          {popularScans.map((scan) => (
+            <View key={scan.id} style={styles.popularCard}>
+              <View style={styles.popularThumb}>
+                {imageMap[scan.id] ? (
+                  <Image source={{ uri: imageMap[scan.id] }} style={styles.popularImage} />
+                ) : null}
+              </View>
+              <Text style={styles.popularTitle}>{scan.productName || "Scan"}</Text>
+              <View style={styles.popularScore}>
+                <Text style={styles.popularScoreText}>{scan.analysisSnapshot?.score?.value ?? "-"}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
     </ScrollView>
   )
 }
@@ -136,16 +264,8 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
     backgroundColor: theme.colors.bg
-  },
-  glowTop: {
-    position: "absolute",
-    top: -120,
-    left: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 999,
-    backgroundColor: "rgba(87, 182, 255, 0.18)"
   },
   headerRow: {
     flexDirection: "row",
@@ -153,134 +273,293 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: theme.spacing.md
   },
-  title: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 22,
     fontWeight: "700",
     color: theme.colors.text,
     fontFamily: theme.font.heading
   },
-  subtitle: {
-    color: theme.colors.muted,
-    marginTop: 4
-  },
-  streakPill: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.glass,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.panelAlt,
     borderWidth: 1,
-    borderColor: theme.colors.border
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center"
   },
-  streakLabel: {
-    color: theme.colors.muted,
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1.2
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover"
   },
-  streakValue: {
-    color: theme.colors.text,
-    fontWeight: "700",
-    marginTop: 2
+  avatarPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.border
   },
-  cardLabel: {
-    color: theme.colors.muted,
-    textTransform: "uppercase",
-    fontSize: 12,
-    letterSpacing: 1.1
-  },
-  heroCard: {
-    marginBottom: theme.spacing.md
-  },
-  heroValue: {
-    fontSize: 42,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginTop: 8,
-    fontFamily: theme.font.heading
-  },
-  heroMeta: {
-    color: theme.colors.textSoft,
-    marginTop: 4
-  },
-  cardMeta: {
-    color: theme.colors.muted,
-    marginTop: 8
-  },
-  glassCard: {
-    backgroundColor: theme.colors.glassStrong,
-    borderRadius: theme.radius.xl,
-    padding: 20,
+  welcomeCard: {
+    backgroundColor: theme.colors.panel,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     ...theme.shadow.card
   },
-  progressBar: {
-    height: 10,
-    backgroundColor: "rgba(255,255,255,0.08)",
+  welcomeText: {
+    fontSize: 16,
+    color: theme.colors.textSoft,
+    fontWeight: "600"
+  },
+  welcomeName: {
+    color: theme.colors.text,
+    fontWeight: "700"
+  },
+  scoreCard: {
+    backgroundColor: theme.colors.panel,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.card
+  },
+  scoreHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: theme.spacing.md
+  },
+  scoreInfo: {
+    flex: 1
+  },
+  sectionLabel: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1
+  },
+  scoreValue: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginTop: 4
+  },
+  scoreMuted: {
+    color: theme.colors.muted,
+    fontSize: 14
+  },
+  scoreStats: {
+    marginTop: theme.spacing.md,
+    gap: 8
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  statText: {
+    color: theme.colors.textSoft,
+    fontSize: 13,
+    flex: 1
+  },
+  statValue: {
+    color: theme.colors.text,
+    fontWeight: "700"
+  },
+  viewJournal: {
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 999,
-    marginTop: 14,
-    overflow: "hidden"
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: theme.colors.accent
+  viewJournalText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 12
   },
-  cardGrid: {
+  card: {
+    backgroundColor: theme.colors.panel,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.card
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm
+  },
+  chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: theme.spacing.md
+    gap: 8,
+    marginBottom: theme.spacing.sm
   },
-  glassTile: {
-    flexGrow: 1,
-    minWidth: 140,
-    backgroundColor: theme.colors.glass,
-    borderRadius: theme.radius.lg,
-    padding: 14,
+  chip: {
+    backgroundColor: theme.colors.panelAlt,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: theme.colors.border
   },
-  tileValue: {
-    color: theme.colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 6
+  chipText: {
+    fontSize: 12,
+    color: theme.colors.text
   },
-  notice: {
-    color: theme.colors.warning,
-    marginBottom: theme.spacing.md
+  infoCard: {
+    backgroundColor: theme.colors.glass,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border
   },
-  actions: {
+  infoRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: theme.spacing.md
+    gap: 10,
+    marginBottom: theme.spacing.sm,
+    alignItems: "flex-start"
   },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: theme.colors.accent2,
-    paddingVertical: 12,
+  infoTitle: {
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 4
+  },
+  infoBody: {
+    color: theme.colors.muted,
+    fontSize: 12
+  },
+  managePrefs: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 999,
-    alignItems: "center"
-  },
-  primaryButtonText: {
-    color: "#051018",
-    fontWeight: "700"
-  },
-  secondaryButton: {
-    flex: 1,
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingVertical: 12,
-    borderRadius: 999,
-    alignItems: "center"
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6
   },
-  secondaryButtonText: {
+  managePrefsText: {
+    color: theme.colors.accent2,
+    fontWeight: "700",
+    fontSize: 12
+  },
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.sm
+  },
+  sectionLink: {
+    color: theme.colors.accent2,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  scanRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border
+  },
+  scanThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: theme.colors.panelAlt,
+    overflow: "hidden"
+  },
+  scanThumbImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover"
+  },
+  scanInfo: {
+    flex: 1
+  },
+  scanTitle: {
+    fontWeight: "600",
+    color: theme.colors.text
+  },
+  scanMeta: {
+    color: theme.colors.muted,
+    fontSize: 11
+  },
+  scanTime: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4
+  },
+  scoreBadge: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4
+  },
+  scoreBadgeText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 12
+  },
+  popularRow: {
+    flexDirection: "row",
+    gap: 12
+  },
+  popularCard: {
+    flex: 1,
+    backgroundColor: theme.colors.panelAlt,
+    borderRadius: theme.radius.md,
+    padding: 10
+  },
+  popularThumb: {
+    width: "100%",
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: theme.colors.border,
+    overflow: "hidden",
+    marginBottom: 8
+  },
+  popularImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover"
+  },
+  popularTitle: {
     color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  popularScore: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    backgroundColor: theme.colors.accent2,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2
+  },
+  popularScoreText: {
+    color: "#ffffff",
+    fontSize: 11,
     fontWeight: "700"
   },
-  disclaimer: {
+  bodyMuted: {
     color: theme.colors.muted,
-    textAlign: "center",
-    marginTop: 8
+    fontSize: 12
   }
 })

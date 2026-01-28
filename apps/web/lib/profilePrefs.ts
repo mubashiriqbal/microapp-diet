@@ -2,6 +2,7 @@ type ProfilePrefs = {
   photoUri?: string | null
   dob?: string | null
   country?: string | null
+  dietaryOther?: string
   dietary: Record<string, boolean>
   allergies: Record<string, boolean>
   allergyOther?: string
@@ -21,6 +22,7 @@ const defaults: ProfilePrefs = {
   photoUri: null,
   dob: null,
   country: null,
+  dietaryOther: "",
   dietary: {},
   allergies: {},
   allergyOther: "",

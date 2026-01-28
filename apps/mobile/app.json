@@ -25,6 +25,10 @@
       "permissions": [
         "CAMERA"
       ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#F8FAFC"
+      },
       "package": "com.askmobisoft55.whatsinmyfood"
     },
     "extra": {

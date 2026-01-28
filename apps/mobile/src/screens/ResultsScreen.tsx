@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image
-} from "react-native"
+import { View, Text, StyleSheet, ScrollView, Image } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import type { AnalyzeFromImagesResponse, UserPrefs } from "@wimf/shared"
 import { theme } from "../theme"
 import { getHealthPrefs, getProfilePrefs, getUserPrefs } from "../storage/cache"
+import ScoreRing from "../components/ScoreRing"
 
 type ResultsParams = {
   analysis: AnalyzeFromImagesResponse
@@ -20,12 +15,6 @@ type ResultsParams = {
 
 type Props = {
   route: { params: ResultsParams }
-}
-
-const categoryColors: Record<string, string> = {
-  Good: theme.colors.success,
-  Moderate: theme.colors.warning,
-  Lower: theme.colors.danger
 }
 
 const spacing = theme.spacing
@@ -39,63 +28,8 @@ const Card = ({ children, style }: { children: React.ReactNode; style?: object }
   <View style={[styles.card, style]}>{children}</View>
 )
 
-const SectionHeader = ({ title, icon }: { title: string; icon?: keyof typeof Ionicons.glyphMap }) => (
-  <View style={styles.sectionHeaderRow}>
-    <Text style={styles.sectionHeader}>{title}</Text>
-    {icon ? <Ionicons name={icon} size={16} color={theme.colors.muted} /> : null}
-  </View>
-)
-
-const MetricCard = ({
-  label,
-  value,
-  helper,
-  accent,
-  icon
-}: {
-  label: string
-  value: string | number
-  helper: string
-  accent?: string
-  icon?: keyof typeof Ionicons.glyphMap
-}) => (
-  <Card style={styles.metricCard}>
-    <View style={styles.metricHeader}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      {icon ? <Ionicons name={icon} size={18} color={accent || theme.colors.muted} /> : null}
-    </View>
-    <Text style={[styles.metricValue, accent ? { color: accent } : null]}>{value}</Text>
-    <Text style={styles.metricHelper}>{helper}</Text>
-  </Card>
-)
-
-const IngredientItem = ({
-  status,
-  name,
-  description,
-  whyUsed,
-  whoMightCare,
-  uncertaintyNote
-}: {
-  status: string
-  name: string
-  description: string
-  whyUsed: string
-  whoMightCare: string
-  uncertaintyNote?: string
-}) => (
-  <Card style={styles.ingredientCard}>
-    <View style={styles.ingredientHeader}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{status}</Text>
-      </View>
-      <Text style={styles.ingredientName}>{name}</Text>
-    </View>
-    <Text style={styles.bodyText}>{description}</Text>
-    <Text style={styles.bodyText}>Why used: {whyUsed}</Text>
-    <Text style={styles.bodyText}>Who might care: {whoMightCare}</Text>
-    {uncertaintyNote ? <Text style={styles.bodyMuted}>Uncertainty: {uncertaintyNote}</Text> : null}
-  </Card>
+const SectionHeader = ({ title }: { title: string }) => (
+  <Text style={styles.sectionHeader}>{title}</Text>
 )
 
 export default function ResultsScreen({ route }: Props) {
@@ -109,10 +43,6 @@ export default function ResultsScreen({ route }: Props) {
     allergies: {} as Record<string, boolean>,
     allergyOther: ""
   })
-  const scoreColor = useMemo(
-    () => categoryColors[analysis.score.category] || theme.colors.text,
-    [analysis.score.category]
-  )
 
   const caloriesPer100g = useMemo(() => {
     const nutrition = analysis.nutritionHighlights
@@ -178,7 +108,6 @@ export default function ResultsScreen({ route }: Props) {
     return detected
   }, [analysis.ingredientBreakdown, profilePrefs.allergyOther, selectedAllergens])
 
-
   useEffect(() => {
     const loadPrefs = async () => {
       const cached = await getUserPrefs()
@@ -196,13 +125,6 @@ export default function ResultsScreen({ route }: Props) {
     loadPrefs()
   }, [])
 
-  const suitabilityLabel =
-    analysis.suitability?.verdict === "good"
-      ? "Suitable"
-      : analysis.suitability?.verdict === "not_recommended"
-        ? "Not recommended"
-        : "Unknown"
-
   return (
     <ScrollView
       contentContainerStyle={[
@@ -219,110 +141,81 @@ export default function ResultsScreen({ route }: Props) {
 
       {imageUri ? (
         <Card style={styles.previewCard}>
-          <SectionHeader title="Captured image" icon="image-outline" />
           <Image source={{ uri: imageUri }} style={styles.previewImage} />
         </Card>
       ) : null}
 
-      <Card style={styles.scoreCard}>
-        <View style={styles.scoreRow}>
-          <View style={styles.scoreCircle}>
-            <Text style={styles.scoreValue}>{analysis.score.value}</Text>
-            <Text style={styles.scoreLabel}>Health score</Text>
-          </View>
-          <View style={styles.scoreMeta}>
-            <Text style={styles.scoreTitle}>{analysis.score.category}</Text>
-            <Text style={styles.bodyMuted}>AI model v1</Text>
-          </View>
-        </View>
-        <View style={styles.flagsWrap}>
+      <Card>
+        <SectionHeader title="Dietary preferences & alerts" />
+        <View style={styles.chipWrap}>
           {Object.entries(profilePrefs.dietary || {})
             .filter(([, value]) => value)
             .map(([key]) => (
-              <View key={key} style={styles.flagChip}>
-                <Text style={styles.flagText}>{formatTag(key)}</Text>
+              <View key={key} style={styles.chip}>
+                <Text style={styles.chipText}>{formatTag(key)}</Text>
               </View>
             ))}
+          {showHalal ? (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>Halal</Text>
+            </View>
+          ) : null}
         </View>
       </Card>
 
       <Card>
-        <SectionHeader title="Allergens detected" icon="alert-circle-outline" />
+        <SectionHeader title="Allergens detected" />
         {detectedAllergens.length ? (
-          <View style={styles.flagsWrap}>
+          <View style={styles.chipWrap}>
             {detectedAllergens.map((item) => (
-              <View key={item} style={[styles.flagChip, styles.flagChipDanger]}>
-                <Text style={styles.flagText}>{formatTag(item)}</Text>
+              <View key={item} style={[styles.chip, styles.chipDanger]}>
+                <Text style={styles.chipText}>{formatTag(item)}</Text>
               </View>
             ))}
           </View>
-        ) : (
-          <Text style={styles.bodyMuted}>None detected based on ingredients.</Text>
-        )}
+      ) : (
+        <Text style={styles.bodyMuted}>None detected based on ingredients.</Text>
+      )}
       </Card>
 
       <Card>
-        <SectionHeader title="Approx calories per 100g" icon="flame-outline" />
+        <View style={styles.scoreRow}>
+          <View style={styles.scoreMeta}>
+            <Text style={styles.sectionLabel}>Health score</Text>
+            <Text style={styles.scoreValue}>{analysis.score.value} / 100</Text>
+            <Text style={styles.bodyMuted}>{analysis.score.category}</Text>
+          </View>
+          <ScoreRing value={analysis.score.value} size={120} />
+        </View>
+      </Card>
+
+      {showHalal ? (
+        <Card>
+          <SectionHeader title="Halal status" />
+          <Text style={styles.bodyText}>{analysis.halal.status.toUpperCase()}</Text>
+          <Text style={styles.bodyMuted}>Confidence {analysis.halal.confidence.toFixed(2)}</Text>
+          <Text style={styles.bodyText}>{analysis.halal.explanation}</Text>
+        </Card>
+      ) : null}
+
+      <Card>
+        <SectionHeader title="Ingredients" />
+        {analysis.ingredientBreakdown.slice(0, 6).map((ingredient, index) => (
+          <View key={`${ingredient.name}-${index}`} style={styles.ingredientRow}>
+            <Ionicons name="leaf-outline" size={16} color={theme.colors.accent2} />
+            <Text style={styles.ingredientName}>{ingredient.name}</Text>
+          </View>
+        ))}
+      </Card>
+
+      <Card>
+        <SectionHeader title="Approx calories per 100g" />
         <Text style={styles.metricValue}>
           {caloriesPer100g === null ? "Unknown" : caloriesPer100g}
         </Text>
         <Text style={styles.metricHelper}>
           {caloriesPer100g === null ? "Estimate unavailable" : "Approximate estimate"}
         </Text>
-      </Card>
-
-      {showHalal ? (
-        <>
-          <SectionHeader title="Halal status" icon="information-circle-outline" />
-          <Card>
-            <Text style={styles.halalStatus}>{analysis.halal.status.toUpperCase()}</Text>
-            <Text style={styles.bodyMuted}>Confidence {analysis.halal.confidence.toFixed(2)}</Text>
-            <Text style={styles.bodyText}>{analysis.halal.explanation}</Text>
-          </Card>
-        </>
-      ) : null}
-
-      <SectionHeader title="Ingredients explained" icon="leaf-outline" />
-      {analysis.ingredientBreakdown.map((ingredient, index) => (
-        <IngredientItem
-          key={`${ingredient.name}-${index}`}
-          status={
-            ingredient.status === "good"
-              ? "OK"
-              : ingredient.status === "caution"
-                ? "WARN"
-                : "NEUTRAL"
-          }
-          name={ingredient.name}
-          description={ingredient.plainEnglish}
-          whyUsed={ingredient.whyUsed}
-          whoMightCare={ingredient.whoMightCare}
-          uncertaintyNote={ingredient.uncertaintyNote}
-        />
-      ))}
-
-      <Card>
-        <SectionHeader title="What we detected" icon="document-text-outline" />
-        <Text style={styles.bodyMuted}>
-          Ingredients: {analysis.parsing.extractedText.ingredientsText || "Not detected"}
-        </Text>
-        <Text style={styles.bodyMuted}>
-          Nutrition: {analysis.parsing.extractedText.nutritionText || "Not detected"}
-        </Text>
-        <Text style={styles.bodyMuted}>
-          Front: {analysis.parsing.extractedText.frontText || "Not provided"}
-        </Text>
-
-        <View style={styles.divider} />
-
-        <SectionHeader title="Approximate calories" icon="fitness-outline" />
-        <View style={styles.nutritionRow}>
-          <View style={styles.nutritionChip}>
-            <Text style={styles.nutritionText}>
-              Calories {analysis.nutritionHighlights?.calories ?? "Unknown"}
-            </Text>
-          </View>
-        </View>
       </Card>
 
       <Text style={styles.disclaimer}>{analysis.disclaimer}</Text>
@@ -340,28 +233,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg
   },
   title: {
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: "700",
     color: theme.colors.text,
     fontFamily: theme.font.heading,
-    lineHeight: 36
+    lineHeight: 32
   },
   subtitle: {
     color: theme.colors.muted,
     marginTop: spacing.sm,
     fontSize: 14
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm
-  },
   sectionHeader: {
-    fontSize: 17,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: theme.colors.text,
+    marginBottom: spacing.sm,
     fontFamily: theme.font.heading
   },
   card: {
@@ -372,60 +259,26 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     marginBottom: spacing.md
   },
-  metricsGrid: {
-    gap: spacing.md
-  },
-  scoreCard: {
-    padding: spacing.md
-  },
   scoreRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    marginBottom: spacing.md
-  },
-  scoreCircle: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: theme.colors.panelAlt,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border
-  },
-  scoreValue: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: theme.colors.text
-  },
-  scoreLabel: {
-    fontSize: 11,
-    color: theme.colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 1
+    justifyContent: "space-between",
+    gap: spacing.md
   },
   scoreMeta: {
     flex: 1
   },
-  scoreTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.text
-  },
-  metricCard: {
-    gap: spacing.sm
-  },
-  metricHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  metricLabel: {
+  sectionLabel: {
+    color: theme.colors.muted,
     fontSize: 12,
-    letterSpacing: 1,
     textTransform: "uppercase",
-    color: theme.colors.muted
+    letterSpacing: 1
+  },
+  scoreValue: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginTop: 4
   },
   metricValue: {
     fontSize: 24,
@@ -438,66 +291,44 @@ const styles = StyleSheet.create({
     color: theme.colors.textSoft
   },
   previewCard: {
-    padding: spacing.md
+    padding: 0,
+    overflow: "hidden"
   },
   previewImage: {
     width: "100%",
-    height: 200,
-    borderRadius: theme.radius.md,
-    marginTop: spacing.sm
+    height: 180
   },
-  flagsWrap: {
+  chipWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm
   },
-  flagChip: {
+  chip: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.glass
+    backgroundColor: theme.colors.panelAlt
   },
-  flagChipDanger: {
+  chipDanger: {
     borderColor: "rgba(230,57,70,0.4)",
     backgroundColor: "rgba(230,57,70,0.12)"
   },
-  flagText: {
+  chipText: {
     color: theme.colors.text,
     fontSize: 12
   },
-  halalStatus: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginBottom: spacing.sm
-  },
-  ingredientCard: {
-    padding: spacing.md
-  },
-  ingredientHeader: {
+  ingredientRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.sm
-  },
-  badge: {
-    backgroundColor: theme.colors.panelAlt,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border
-  },
-  badgeText: {
-    color: theme.colors.textSoft,
-    fontSize: 11
+    gap: 8,
+    paddingVertical: 6
   },
   ingredientName: {
     color: theme.colors.text,
     fontWeight: "600",
-    fontSize: 15
+    fontSize: 14
   },
   bodyText: {
     color: theme.colors.textSoft,
@@ -506,27 +337,6 @@ const styles = StyleSheet.create({
   },
   bodyMuted: {
     color: theme.colors.muted,
-    fontSize: 12,
-    marginTop: spacing.sm
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: spacing.md
-  },
-  nutritionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm
-  },
-  nutritionChip: {
-    backgroundColor: theme.colors.panelAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999
-  },
-  nutritionText: {
-    color: theme.colors.textSoft,
     fontSize: 12
   },
   disclaimer: {

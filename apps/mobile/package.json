@@ -17,6 +17,7 @@
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
     "@react-native-picker/picker": "^2.6.1",
+    "@react-native-community/slider": "^4.5.2",
     "expo": "^49.0.17",
     "expo-camera": "~13.4.4",
     "expo-constants": "~14.4.2",

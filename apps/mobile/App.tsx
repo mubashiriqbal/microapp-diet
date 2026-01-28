@@ -245,11 +245,17 @@ function DrawerContent({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets()
 
   return (
-    <DrawerContentScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 32, paddingBottom: 24 }}>
-      <View style={{ marginBottom: 24 }}>
+    <DrawerContentScrollView
+      contentContainerStyle={{
+        paddingHorizontal: 24,
+        paddingTop: insets.top + 24,
+        paddingBottom: 24
+      }}
+    >
+      <View style={{ marginBottom: 28 }}>
         <Image
           source={require("./assets/drawer-logo.png")}
-          style={{ width: 140, height: 56, resizeMode: "contain", marginBottom: 8 }}
+          style={{ width: 200, height: 88, resizeMode: "contain" }}
         />
       </View>
       <DrawerItem

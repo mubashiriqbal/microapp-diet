@@ -1,9 +1,8 @@
 import { useContext, useState } from "react"
-import { View, Text, TextInput, StyleSheet, Pressable } from "react-native"
+import { View, Text, TextInput, StyleSheet, Pressable, ScrollView } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { signUpUser } from "../api/client"
 import { setHealthPrefs, setProfile, setToken, setUserId } from "../storage/cache"
-import MultiSelect from "../components/MultiSelect"
 import { theme } from "../theme"
 import { AuthContext } from "../auth"
 
@@ -11,40 +10,43 @@ type Props = {
   navigation: any
 }
 
+const dietaryOptions = [
+  { key: "halal", label: "Halal", icon: "checkmark-circle", color: "#1ABC9C" },
+  { key: "kosher", label: "Kosher", icon: "shield-checkmark", color: "#2C7BE5" },
+  { key: "vegetarian", label: "Vegetarian", icon: "leaf", color: "#22C55E" },
+  { key: "vegan", label: "Vegan", icon: "leaf-outline", color: "#16A34A" },
+  { key: "pescatarian", label: "Pescatarian", icon: "fish", color: "#3B82F6" },
+  { key: "keto", label: "Keto", icon: "flame", color: "#F97316" },
+  { key: "low_carb", label: "Low Carb", icon: "speedometer", color: "#14B8A6" },
+  { key: "low_sodium", label: "Low Sodium", icon: "water", color: "#0EA5E9" },
+  { key: "low_sugar", label: "Low Sugar", icon: "fitness", color: "#E11D48" },
+  { key: "high_protein", label: "High Protein", icon: "barbell", color: "#2563EB" },
+  { key: "gluten_free", label: "Gluten-Free", icon: "ban", color: "#F59E0B" },
+  { key: "dairy_free", label: "Dairy-Free", icon: "nutrition", color: "#8B5CF6" }
+]
+
+const allergyOptions = [
+  { key: "peanuts", label: "Peanuts", icon: "warning", color: "#E63946" },
+  { key: "tree_nuts", label: "Tree Nuts", icon: "leaf", color: "#B45309" },
+  { key: "dairy", label: "Dairy", icon: "cafe", color: "#2563EB" },
+  { key: "eggs", label: "Eggs", icon: "nutrition", color: "#F59E0B" },
+  { key: "shellfish", label: "Shellfish", icon: "fish", color: "#EF4444" },
+  { key: "fish", label: "Fish", icon: "fish-outline", color: "#3B82F6" },
+  { key: "soy", label: "Soy", icon: "leaf-outline", color: "#22C55E" },
+  { key: "wheat_gluten", label: "Wheat / Gluten", icon: "pizza", color: "#F97316" },
+  { key: "sesame", label: "Sesame", icon: "nutrition-outline", color: "#F59E0B" },
+  { key: "sulfites", label: "Sulfites", icon: "alert", color: "#EF4444" }
+]
+
 export default function SignupScreen({ navigation }: Props) {
   const { setIsAuthed } = useContext(AuthContext)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [status, setStatus] = useState("")
-  const [restrictions, setRestrictions] = useState<string[]>([])
-  const [allergens, setAllergens] = useState<string[]>([])
-
-  const restrictionOptions = [
-    { value: "vegan", label: "Vegan", description: "Excludes all animal-derived foods." },
-    { value: "vegetarian", label: "Vegetarian", description: "No meat or fish; may include eggs/dairy." },
-    { value: "gluten_free", label: "Gluten-Free", description: "No wheat, barley, or rye." },
-    { value: "lactose_free", label: "Dairy-Free", description: "Avoids milk-based products." },
-    { value: "nut_allergy", label: "Nut Allergies", description: "Avoid peanuts and tree nuts." },
-    { value: "halal", label: "Halal", description: "Complies with Islamic dietary laws." },
-    { value: "kosher", label: "Kosher", description: "Complies with Jewish dietary laws." },
-    { value: "hindu", label: "Hindu", description: "Commonly restricts beef; some avoid all meat." },
-    { value: "keto", label: "Keto", description: "High fat, low carb." },
-    { value: "diabetic", label: "Diabetic", description: "Manages sugar and carbohydrates." },
-    { value: "low_sodium", label: "Low-Sodium / Low-Fat", description: "Used for cardiovascular health." }
-  ]
-
-  const allergenOptions = [
-    { value: "milk", label: "Milk" },
-    { value: "eggs", label: "Eggs" },
-    { value: "peanuts", label: "Peanuts" },
-    { value: "tree_nuts", label: "Tree Nuts", description: "Almonds, walnuts, pecans, etc." },
-    { value: "fish", label: "Fish", description: "Salmon, cod, flounder, etc." },
-    { value: "shellfish", label: "Crustacean Shellfish", description: "Shrimp, crab, lobster." },
-    { value: "wheat", label: "Wheat" },
-    { value: "soy", label: "Soy" },
-    { value: "sesame", label: "Sesame", description: "Recognized as major allergen (2023)." }
-  ]
+  const [dietary, setDietary] = useState<Record<string, boolean>>({})
+  const [allergies, setAllergies] = useState<Record<string, boolean>>({})
+  const [allergyOther, setAllergyOther] = useState("")
 
   const handleSignup = async () => {
     setStatus("Creating account...")
@@ -53,7 +55,13 @@ export default function SignupScreen({ navigation }: Props) {
       await setToken(response.token)
       await setProfile(response.profile)
       await setUserId(response.profile.id)
-      await setHealthPrefs({ restrictions, allergens })
+      const restrictions = Object.entries(dietary)
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+      const allergens = Object.entries(allergies)
+        .filter(([, value]) => value)
+        .map(([key]) => key)
+      await setHealthPrefs({ restrictions, allergens, allergyOther })
       setIsAuthed(true)
       setStatus("Account created.")
       navigation.replace("Main")
@@ -63,7 +71,7 @@ export default function SignupScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.logo}>SafePlate AI</Text>
       <Text style={styles.tagline}>I can trust this app with my health.</Text>
       <Text style={styles.title}>Sign up</Text>
@@ -94,21 +102,51 @@ export default function SignupScreen({ navigation }: Props) {
         onChangeText={setPassword}
       />
 
-      <MultiSelect
-        label="Common dietary restrictions"
-        options={restrictionOptions}
-        selected={restrictions}
-        onChange={setRestrictions}
-        placeholder="Search dietary restrictions"
-      />
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Dietary restrictions</Text>
+        {dietaryOptions.map((item) => (
+          <Pressable
+            key={item.key}
+            style={styles.checkRow}
+            onPress={() => setDietary((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+          >
+            <Ionicons
+              name={dietary[item.key] ? "checkbox" : "square-outline"}
+              size={20}
+              color={dietary[item.key] ? theme.colors.accent : theme.colors.muted}
+            />
+            <Ionicons name={item.icon as any} size={16} color={item.color} />
+            <Text style={styles.checkLabel}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
-      <MultiSelect
-        label="Allergens"
-        options={allergenOptions}
-        selected={allergens}
-        onChange={setAllergens}
-        placeholder="Search allergens"
-      />
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Allergies & intolerances</Text>
+        {allergyOptions.map((item) => (
+          <Pressable
+            key={item.key}
+            style={styles.checkRow}
+            onPress={() => setAllergies((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+          >
+            <Ionicons
+              name={allergies[item.key] ? "checkbox" : "square-outline"}
+              size={20}
+              color={allergies[item.key] ? theme.colors.warning : theme.colors.muted}
+            />
+            <Ionicons name={item.icon as any} size={16} color={item.color} />
+            <Text style={styles.checkLabel}>{item.label}</Text>
+          </Pressable>
+        ))}
+        <Text style={styles.label}>Other (custom)</Text>
+        <TextInput
+          style={styles.input}
+          value={allergyOther}
+          onChangeText={setAllergyOther}
+          placeholder="Add custom allergy"
+          placeholderTextColor={theme.colors.muted}
+        />
+      </View>
 
       <Pressable style={styles.primaryButton} onPress={handleSignup}>
         <Ionicons name="person-add-outline" size={18} color="#ffffff" />
@@ -120,21 +158,21 @@ export default function SignupScreen({ navigation }: Props) {
       </Pressable>
 
       {status ? <Text style={styles.status}>{status}</Text> : null}
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: theme.spacing.lg,
+    paddingTop: theme.spacing.xl + 12,
     backgroundColor: theme.colors.bg
   },
   logo: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: theme.colors.text,
-    marginTop: theme.spacing.xl,
+    marginTop: 0,
     marginBottom: 6,
     fontFamily: theme.font.heading
   },
@@ -160,6 +198,36 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: theme.colors.border
+  },
+  card: {
+    backgroundColor: theme.colors.panel,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 12
+  },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8
+  },
+  checkLabel: {
+    color: theme.colors.text,
+    fontWeight: "600"
+  },
+  label: {
+    fontWeight: "600",
+    color: theme.colors.text,
+    marginTop: 8,
+    marginBottom: 6
   },
   primaryButton: {
     backgroundColor: theme.colors.accent,
