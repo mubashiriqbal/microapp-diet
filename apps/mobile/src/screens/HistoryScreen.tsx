@@ -59,7 +59,9 @@ export default function HistoryScreen() {
         const score = entry.analysisSnapshot?.score?.value
         const nutrition = entry.analysisSnapshot?.nutritionHighlights
         let calories: number | string | null = "Unknown"
-        if (nutrition) {
+        if (entry.analysisSnapshot?.caloriesPer50g !== null && entry.analysisSnapshot?.caloriesPer50g !== undefined) {
+          calories = Number((entry.analysisSnapshot.caloriesPer50g * 2).toFixed(1))
+        } else if (nutrition) {
           if (nutrition.caloriesPer100g !== null && nutrition.caloriesPer100g !== undefined) {
             calories = nutrition.caloriesPer100g
           } else if (
@@ -70,6 +72,8 @@ export default function HistoryScreen() {
             nutrition.servingSizeG > 0
           ) {
             calories = Number(((nutrition.calories * 100) / nutrition.servingSizeG).toFixed(1))
+          } else if (nutrition.calories !== null && nutrition.calories !== undefined) {
+            calories = Number(nutrition.calories.toFixed(1))
           }
         }
         const name = entry.productName || entry.analysisSnapshot?.productName || "Scan"

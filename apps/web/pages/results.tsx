@@ -44,6 +44,9 @@ export default function Results() {
   const caloriesPer100g = useMemo(() => {
     if (!analysis) return null
     const nutrition = analysis.nutritionHighlights
+    if (analysis.caloriesPer50g !== null && analysis.caloriesPer50g !== undefined) {
+      return Number((analysis.caloriesPer50g * 2).toFixed(1))
+    }
     if (!nutrition) return null
     if (nutrition.caloriesPer100g !== null && nutrition.caloriesPer100g !== undefined) {
       return Number(nutrition.caloriesPer100g.toFixed(1))
@@ -56,6 +59,9 @@ export default function Results() {
       nutrition.servingSizeG > 0
     ) {
       return Number(((nutrition.calories * 100) / nutrition.servingSizeG).toFixed(1))
+    }
+    if (nutrition.calories !== null && nutrition.calories !== undefined) {
+      return Number(nutrition.calories.toFixed(1))
     }
     return null
   }, [analysis])

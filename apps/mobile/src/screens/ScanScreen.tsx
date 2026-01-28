@@ -44,7 +44,10 @@ export default function ScanScreen() {
     setStatus("Capturing photo...")
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 })
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        skipProcessing: true
+      })
       const file = {
         uri: photo.uri,
         name: "label.jpg",
@@ -306,11 +309,14 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   primaryAction: {
-    flex: 1
+    flex: 1,
+    minHeight: 56,
+    paddingVertical: 16
   },
   primaryActionText: {
     color: "#ffffff",
-    fontWeight: "700"
+    fontWeight: "700",
+    fontSize: 16
   },
   secondaryAction: {
     paddingHorizontal: 18,
