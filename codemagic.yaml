@@ -33,3 +33,36 @@ workflows:
             -Pandroid.ndkVersion=23.1.7779620
     artifacts:
       - apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+  android-release:
+    name: Android Release APK (standalone)
+    max_build_duration: 90
+    environment:
+      node: 18.18.2
+      java: 17
+      vars:
+        EXPO_PUBLIC_API_BASE: "http://76.13.100.119:4000"
+        GRADLE_OPTS: "-Dorg.gradle.daemon=true -Dorg.gradle.caching=true"
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+        - $HOME/.npm
+        - $HOME/.cache
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install --no-audit --no-fund
+      - name: Build shared package
+        script: |
+          npm run build --workspace packages/shared
+      - name: Build release APK
+        script: |
+          cd apps/mobile/android
+          chmod +x gradlew
+          ./gradlew assembleRelease --build-cache \
+            -Pandroid.compileSdkVersion=33 \
+            -Pandroid.targetSdkVersion=33 \
+            -Pandroid.buildToolsVersion=33.0.0 \
+            -Pandroid.ndkVersion=23.1.7779620
+    artifacts:
+      - apps/mobile/android/app/build/outputs/apk/release/app-release.apk
