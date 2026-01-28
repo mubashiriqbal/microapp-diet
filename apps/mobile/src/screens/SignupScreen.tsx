@@ -11,18 +11,18 @@ type Props = {
 }
 
 const dietaryOptions = [
-  { key: "halal", label: "Halal", icon: "checkmark-circle", color: "#1ABC9C" },
-  { key: "kosher", label: "Kosher", icon: "shield-checkmark", color: "#2C7BE5" },
-  { key: "vegetarian", label: "Vegetarian", icon: "leaf", color: "#22C55E" },
-  { key: "vegan", label: "Vegan", icon: "leaf-outline", color: "#16A34A" },
-  { key: "pescatarian", label: "Pescatarian", icon: "fish", color: "#3B82F6" },
-  { key: "keto", label: "Keto", icon: "flame", color: "#F97316" },
-  { key: "low_carb", label: "Low Carb", icon: "speedometer", color: "#14B8A6" },
-  { key: "low_sodium", label: "Low Sodium", icon: "water", color: "#0EA5E9" },
-  { key: "low_sugar", label: "Low Sugar", icon: "fitness", color: "#E11D48" },
-  { key: "high_protein", label: "High Protein", icon: "barbell", color: "#2563EB" },
-  { key: "gluten_free", label: "Gluten-Free", icon: "ban", color: "#F59E0B" },
-  { key: "dairy_free", label: "Dairy-Free", icon: "nutrition", color: "#8B5CF6" }
+  { key: "halal", label: "Halal", icon: "checkmark-circle", color: "#1ABC9C", type: "ion" },
+  { key: "kosher", label: "Kosher", icon: "shield-checkmark", color: "#2C7BE5", type: "ion" },
+  { key: "vegetarian", label: "Vegetarian", icon: "leaf", color: "#22C55E", type: "ion" },
+  { key: "vegan", label: "Vegan", icon: "leaf-outline", color: "#16A34A", type: "ion" },
+  { key: "pescatarian", label: "Pescatarian", icon: "fish", color: "#3B82F6", type: "ion" },
+  { key: "keto", label: "Keto", icon: "flame", color: "#F97316", type: "ion" },
+  { key: "low_carb", label: "Low Carb", icon: "speedometer", color: "#14B8A6", type: "ion" },
+  { key: "low_sodium", label: "Low Sodium", icon: "water", color: "#0EA5E9", type: "ion" },
+  { key: "low_sugar", label: "Low Sugar", icon: "fitness", color: "#E11D48", type: "ion" },
+  { key: "high_protein", label: "High Protein", icon: "barbell", color: "#2563EB", type: "ion" },
+  { key: "gluten_free", label: "Gluten-Free", icon: "gf", color: "#F59E0B", type: "gf" },
+  { key: "dairy_free", label: "Dairy-Free", icon: "nutrition", color: "#8B5CF6", type: "ion" }
 ]
 
 const allergyOptions = [
@@ -116,7 +116,14 @@ export default function SignupScreen({ navigation }: Props) {
               size={20}
               color={dietary[item.key] ? theme.colors.accent : theme.colors.muted}
             />
-            <Ionicons name={item.icon as any} size={16} color={item.color} />
+            {item.type === "gf" ? (
+              <View style={styles.gfIcon}>
+                <Text style={styles.gfText}>GF</Text>
+                <View style={styles.gfSlash} />
+              </View>
+            ) : (
+              <Ionicons name={item.icon as any} size={16} color={item.color} />
+            )}
             <Text style={styles.checkLabel}>{item.label}</Text>
           </Pressable>
         ))}
@@ -220,6 +227,28 @@ const styles = StyleSheet.create({
   checkLabel: {
     color: theme.colors.text,
     fontWeight: "600"
+  },
+  gfIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: "#F59E0B",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative"
+  },
+  gfText: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: "#F59E0B"
+  },
+  gfSlash: {
+    position: "absolute",
+    width: 22,
+    height: 2,
+    backgroundColor: "#F59E0B",
+    transform: [{ rotate: "-35deg" }]
   },
   label: {
     fontWeight: "600",
