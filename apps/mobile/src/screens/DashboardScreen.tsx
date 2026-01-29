@@ -237,9 +237,11 @@ export default function DashboardScreen() {
                   <Image source={{ uri: imageMap[scan.id] }} style={styles.popularImage} />
                 ) : null}
               </View>
-              <Text style={styles.popularTitle}>{scan.productName || "Scan"}</Text>
-              <View style={styles.popularScore}>
-                <Text style={styles.popularScoreText}>{scan.analysisSnapshot?.score?.value ?? "-"}</Text>
+              <View style={styles.popularFooter}>
+                <Text style={styles.popularTitle}>{scan.productName || "Scan"}</Text>
+                <View style={styles.popularScore}>
+                  <Text style={styles.popularScoreText}>{scan.analysisSnapshot?.score?.value ?? "-"}</Text>
+                </View>
               </View>
             </View>
           ))}
@@ -494,9 +496,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600"
   },
+  popularFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8
+  },
   popularScore: {
-    alignSelf: "flex-start",
-    marginTop: 6,
     backgroundColor: theme.colors.accent2,
     borderRadius: 999,
     paddingHorizontal: 8,
