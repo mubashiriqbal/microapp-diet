@@ -249,7 +249,7 @@ const allergyChecks = [
   { key: "tree_nuts", label: "Tree Nuts", icon: <span aria-hidden>{emoji(0x1f330)}</span>, color: "#B45309" },
   { key: "dairy", label: "Dairy", icon: <span aria-hidden>{emoji(0x1f95b)}</span>, color: "#2563EB" },
   { key: "eggs", label: "Eggs", icon: <span aria-hidden>{emoji(0x1f95a)}</span>, color: "#F59E0B" },
-  { key: "shellfish", label: "Shellfish", icon: <span aria-hidden>{emoji(0x1f99e)}</span>, color: "#EF4444" },
+  { key: "shellfish", label: "Shellfish", icon: <span className="material-icons" aria-hidden>set_meal</span>, color: "#EF4444" },
   { key: "fish", label: "Fish", icon: <span aria-hidden>{emoji(0x1f41f)}</span>, color: "#3B82F6" },
   { key: "soy", label: "Soy", icon: <span aria-hidden>{emoji(0x1fadb)}</span>, color: "#22C55E" },
   { key: "wheat_gluten", label: "Wheat / Gluten", icon: <span aria-hidden>{emoji(0x1f33e)}</span>, color: "#F97316" },
