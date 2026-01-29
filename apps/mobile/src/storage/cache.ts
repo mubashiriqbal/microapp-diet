@@ -175,6 +175,12 @@ export async function setScanImageForId(id: string, uri: string): Promise<void> 
   await AsyncStorage.setItem(SCAN_IMAGE_KEY, JSON.stringify(map))
 }
 
+export async function setScanImageForKey(key: string, uri: string): Promise<void> {
+  const map = await getScanImageMap()
+  map[key] = uri
+  await AsyncStorage.setItem(SCAN_IMAGE_KEY, JSON.stringify(map))
+}
+
 export async function getScanImageForId(id: string): Promise<string | null> {
   const map = await getScanImageMap()
   return map[id] || null

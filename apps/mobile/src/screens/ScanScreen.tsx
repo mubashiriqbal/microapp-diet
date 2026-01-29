@@ -6,7 +6,14 @@ import { runAnalyze, saveHistory } from "../api/client"
 import GradientButton from "../components/GradientButton"
 import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native"
 import { theme } from "../theme"
-import { getProfile, getScanHistoryCache, setLastAnalysis, setScanHistoryCache, setScanImageForId } from "../storage/cache"
+import {
+  getProfile,
+  getScanHistoryCache,
+  setLastAnalysis,
+  setScanHistoryCache,
+  setScanImageForId,
+  setScanImageForKey
+} from "../storage/cache"
 import type { ScanHistory } from "@wimf/shared"
 
 type ImageState = {
@@ -105,6 +112,8 @@ export default function ScanScreen() {
         await setScanHistoryCache(optimistic)
         if (image.label?.uri) {
           await setScanImageForId(localId, image.label.uri)
+          const key = `${localEntry.createdAt}|${localEntry.productName || ""}`
+          await setScanImageForKey(key, image.label.uri)
         }
 
         const saved = await saveHistory({
@@ -117,6 +126,8 @@ export default function ScanScreen() {
         if (saved?.id) {
           if (image.label?.uri) {
             await setScanImageForId(saved.id, image.label.uri)
+            const key = `${saved.createdAt}|${saved.productName || saved.analysisSnapshot?.productName || ""}`
+            await setScanImageForKey(key, image.label.uri)
           }
           const refreshed = await getScanHistoryCache()
           const next = [saved, ...refreshed.filter((entry) => entry.id !== localId && entry.id !== saved.id)]
