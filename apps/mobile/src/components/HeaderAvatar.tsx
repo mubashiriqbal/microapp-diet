@@ -2,7 +2,7 @@
 import { Image, Pressable, View } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { getProfilePrefs } from "../storage/cache"
-import { theme } from "./src/theme"
+import { theme } from "../theme"
 
 export default function HeaderAvatar() {
   const navigation = useNavigation()
