@@ -190,7 +190,9 @@ export default function ScanScreen() {
           </Pressable>
         ) : (
           <Pressable style={styles.captureButton} onPress={capturePhoto}>
-            <MaterialIcons name="center-focus-strong" size={26} color="#ffffff" />
+            <View style={styles.captureCircle}>
+              <MaterialIcons name="center-focus-strong" size={26} color="#ffffff" />
+            </View>
             <Text style={styles.captureLabel}>Snap</Text>
           </Pressable>
         )}
@@ -301,14 +303,19 @@ const styles = StyleSheet.create({
   },
   captureButton: {
     flex: 3,
-    minHeight: 64,
-    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6
+  },
+  captureCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: theme.colors.accent,
     borderWidth: 4,
     borderColor: theme.colors.panel,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -316,8 +323,8 @@ const styles = StyleSheet.create({
     elevation: 6
   },
   captureLabel: {
-    color: "#ffffff",
-    fontSize: 11,
+    color: theme.colors.muted,
+    fontSize: 12,
     fontWeight: "700"
   },
   primaryAction: {
