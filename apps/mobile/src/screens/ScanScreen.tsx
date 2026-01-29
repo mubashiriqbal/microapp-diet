@@ -300,8 +300,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md
   },
   captureButton: {
-    width: 72,
-    height: 72,
+    flex: 1,
+    minHeight: 64,
     borderRadius: 999,
     backgroundColor: theme.colors.accent,
     borderWidth: 3,
@@ -316,8 +316,8 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   primaryAction: {
-    flex: 1,
-    minHeight: 60,
+    flex: 2,
+    minHeight: 64,
     paddingVertical: 18
   },
   primaryActionText: {
