@@ -488,7 +488,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {profile && (
-        <View style={styles.card}>
+        <View style={[styles.card, styles.cardInfo]}>
           <Text style={styles.sectionTitle}>Personal information</Text>
           <View style={styles.photoRow}>
             <View style={styles.photoPlaceholder}>
@@ -613,7 +613,7 @@ export default function SettingsScreen() {
         </View>
       )}
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.cardDiet]}>
         <Text style={styles.sectionTitle}>Dietary restrictions</Text>
         {dietaryOptions.map((item) => (
           <View key={item.key} style={styles.toggleRow}>
@@ -646,7 +646,7 @@ export default function SettingsScreen() {
         />
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.cardAllergy]}>
         <Text style={styles.sectionTitle}>Allergies & intolerances</Text>
         {allergyOptions.map((item) => (
           <Pressable
@@ -677,7 +677,7 @@ export default function SettingsScreen() {
         />
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.cardAlerts]}>
         <Text style={styles.sectionTitle}>Alert preferences</Text>
         {alertOptions.map((item) => (
           <View key={item.key} style={styles.toggleRow}>
@@ -690,7 +690,7 @@ export default function SettingsScreen() {
         ))}
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.cardSensitivity]}>
         <Text style={styles.sectionTitle}>Health sensitivities</Text>
         {sensitivityOptions.map((item) => (
           <View key={item.key} style={styles.toggleRow}>
@@ -704,7 +704,7 @@ export default function SettingsScreen() {
         <Text style={styles.bodyMuted}>This app does not provide medical advice.</Text>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, styles.cardScoring]}>
         <Text style={styles.sectionTitle}>Scoring preferences</Text>
         <Text style={styles.label}>Prioritize allergies</Text>
         <Slider
@@ -775,6 +775,30 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border
+  },
+  cardInfo: {
+    backgroundColor: "#EEF6FF",
+    borderColor: "#CFE2FF"
+  },
+  cardDiet: {
+    backgroundColor: "#E9FBF6",
+    borderColor: "#BFF3E5"
+  },
+  cardAllergy: {
+    backgroundColor: "#FFF1F2",
+    borderColor: "#FECACA"
+  },
+  cardAlerts: {
+    backgroundColor: "#FFF7E6",
+    borderColor: "#FDDDB3"
+  },
+  cardSensitivity: {
+    backgroundColor: "#EEF2FF",
+    borderColor: "#C7D2FE"
+  },
+  cardScoring: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E2E8F0"
   },
   sectionTitle: {
     fontSize: 16,
