@@ -58,17 +58,13 @@ export default function ScanScreen() {
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.4,
-        skipProcessing: true,
-        base64: true
+        skipProcessing: true
       })
-      const previewUri = photo.base64
-        ? `data:image/jpeg;base64,${photo.base64}`
-        : photo.uri
       const file = {
         uri: photo.uri,
         name: "label.jpg",
         type: "image/jpeg",
-        previewUri
+        previewUri: photo.uri
       }
 
       setImage({ label: file })
@@ -122,7 +118,7 @@ export default function ScanScreen() {
         const cached = await getScanHistoryCache()
         const optimistic = [localEntry, ...cached.filter((entry) => entry.id !== localId)]
         await setScanHistoryCache(optimistic)
-        if (image.label?.previewUri) {
+        if (image.label?.previewUri && !image.label.previewUri.startsWith("data:")) {
           await setScanImageForId(localId, image.label.previewUri)
           const key = `${localEntry.createdAt}|${localEntry.productName || ""}`
           await setScanImageForKey(key, image.label.previewUri)
@@ -137,7 +133,7 @@ export default function ScanScreen() {
           analysisSnapshot: analysis
         })
         if (saved?.id) {
-          if (image.label?.previewUri) {
+          if (image.label?.previewUri && !image.label.previewUri.startsWith("data:")) {
             await setScanImageForId(saved.id, image.label.previewUri)
             const key = `${saved.createdAt}|${saved.productName || saved.analysisSnapshot?.productName || ""}`
             await setScanImageForKey(key, image.label.previewUri)

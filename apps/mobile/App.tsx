@@ -9,7 +9,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { StatusBar } from "expo-status-bar"
 import { Image, Pressable, Text, View } from "react-native"
 import { useEffect, useState, useContext } from "react"
-import { Ionicons, MaterialIcons } from "@expo/vector-icons"
+import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import DashboardScreen from "./src/screens/DashboardScreen"
@@ -23,7 +23,7 @@ import SignupScreen from "./src/screens/SignupScreen"
 import ForgotPasswordScreen from "./src/screens/ForgotPasswordScreen"
 import ResetPasswordScreen from "./src/screens/ResetPasswordScreen"
 import { theme } from "./src/theme"
-import { clearAuth, getToken } from "./src/storage/cache"
+import { cleanupScanImageCache, clearAuth, getToken } from "./src/storage/cache"
 import { AuthContext } from "./src/auth"
 import HeaderAvatar from "./src/components/HeaderAvatar"
 
@@ -81,33 +81,6 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           if (!isFocused) {
             navigation.navigate(route.name)
           }
-        }
-
-        if (route.name === "Scan") {
-          return (
-            <Pressable
-              key={route.key}
-              onPress={onPress}
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 36,
-                backgroundColor: theme.colors.accent,
-                alignItems: "center",
-                justifyContent: "center",
-                marginTop: -24,
-                borderWidth: 4,
-                borderColor: theme.colors.panel,
-                shadowColor: "#000",
-                shadowOpacity: 0.12,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: 6
-              }}
-            >
-              <MaterialIcons name="center-focus-strong" size={28} color="#ffffff" />
-            </Pressable>
-          )
         }
 
         return (
@@ -332,6 +305,7 @@ export default function App() {
       setIsReady(true)
     }
     checkAuth()
+    cleanupScanImageCache().catch(() => {})
   }, [])
 
   const navTheme = {

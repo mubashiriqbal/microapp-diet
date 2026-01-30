@@ -914,6 +914,7 @@ app.post(
       const ingredientsFile = files.ingredientsImage?.[0]
       const nutritionFile = files.nutritionImage?.[0]
       const frontFile = files.frontImage?.[0]
+      const imageUrl = await saveUpload(frontFile || ingredientsFile || nutritionFile, req)
 
       if (!ingredientsFile && !nutritionFile && !frontFile) {
         return res.status(400).json({ error: "At least one label image is required." })

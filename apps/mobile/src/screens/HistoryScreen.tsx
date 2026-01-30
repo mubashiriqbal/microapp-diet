@@ -120,7 +120,7 @@ export default function HistoryScreen() {
                     screen: "Results",
                     params: {
                       analysis: entry.analysisSnapshot,
-                      imageUri: imageMap[entry.id] || null,
+                      imageUri: previewUri,
                       fromHistory: true
                     }
                   }

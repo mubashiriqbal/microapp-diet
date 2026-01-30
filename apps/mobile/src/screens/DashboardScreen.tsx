@@ -211,7 +211,7 @@ export default function DashboardScreen() {
                   "Results" as never,
                   {
                     analysis: scan.analysisSnapshot,
-                    imageUri: imageMap[scan.id] || null,
+                    imageUri: scan.imageUrl || imageMap[scan.id] || null,
                     fromHistory: true
                   } as never
                 )
@@ -252,7 +252,7 @@ export default function DashboardScreen() {
                   "Results" as never,
                   {
                     analysis: scan.analysisSnapshot,
-                    imageUri: imageMap[scan.id] || null,
+                    imageUri: scan.imageUrl || imageMap[scan.id] || null,
                     fromHistory: true
                   } as never
                 )

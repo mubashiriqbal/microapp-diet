@@ -199,3 +199,26 @@ export async function getScanHistoryCache(): Promise<ScanHistory[]> {
 export async function setScanHistoryCache(items: ScanHistory[]): Promise<void> {
   await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(items))
 }
+
+export async function cleanupScanImageCache(): Promise<void> {
+  const map = await getScanImageMap()
+  let changed = false
+  const next: ScanImageMap = {}
+  for (const [key, uri] of Object.entries(map)) {
+    if (typeof uri !== "string") {
+      changed = true
+      continue
+    }
+    if (uri.startsWith("data:")) {
+      changed = true
+      continue
+    }
+    next[key] = uri
+  }
+  if (!changed) return
+  if (Object.keys(next).length === 0) {
+    await AsyncStorage.removeItem(SCAN_IMAGE_KEY)
+  } else {
+    await AsyncStorage.setItem(SCAN_IMAGE_KEY, JSON.stringify(next))
+  }
+}
