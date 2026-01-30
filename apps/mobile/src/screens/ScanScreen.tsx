@@ -18,7 +18,7 @@ import {
 import type { AnalyzeFromImagesResponse, ScanHistory } from "@wimf/shared"
 
 type ImageState = {
-  label?: { uri: string; name: string; type: string }
+  label?: { uri: string; name: string; type: string; previewUri?: string }
 }
 
 export default function ScanScreen() {
@@ -57,13 +57,18 @@ export default function ScanScreen() {
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
-        skipProcessing: true
+        quality: 0.4,
+        skipProcessing: true,
+        base64: true
       })
+      const previewUri = photo.base64
+        ? `data:image/jpeg;base64,${photo.base64}`
+        : photo.uri
       const file = {
         uri: photo.uri,
         name: "label.jpg",
-        type: "image/jpeg"
+        type: "image/jpeg",
+        previewUri
       }
 
       setImage({ label: file })
@@ -81,7 +86,7 @@ export default function ScanScreen() {
 
     setStatus("Analyzing image...")
     const formData = new FormData()
-    formData.append("frontImage", image.label as unknown as Blob)
+      formData.append("frontImage", image.label as unknown as Blob)
     const profile = await getProfile()
     if (profile?.id) {
       formData.append("userId", profile.id)
@@ -116,10 +121,10 @@ export default function ScanScreen() {
         const cached = await getScanHistoryCache()
         const optimistic = [localEntry, ...cached.filter((entry) => entry.id !== localId)]
         await setScanHistoryCache(optimistic)
-        if (image.label?.uri) {
-          await setScanImageForId(localId, image.label.uri)
+        if (image.label?.previewUri) {
+          await setScanImageForId(localId, image.label.previewUri)
           const key = `${localEntry.createdAt}|${localEntry.productName || ""}`
-          await setScanImageForKey(key, image.label.uri)
+          await setScanImageForKey(key, image.label.previewUri)
         }
 
         const saved = await saveHistory({
@@ -130,10 +135,10 @@ export default function ScanScreen() {
           analysisSnapshot: analysis
         })
         if (saved?.id) {
-          if (image.label?.uri) {
-            await setScanImageForId(saved.id, image.label.uri)
+          if (image.label?.previewUri) {
+            await setScanImageForId(saved.id, image.label.previewUri)
             const key = `${saved.createdAt}|${saved.productName || saved.analysisSnapshot?.productName || ""}`
-            await setScanImageForKey(key, image.label.uri)
+            await setScanImageForKey(key, image.label.previewUri)
           }
           const refreshed = await getScanHistoryCache()
           const next = [saved, ...refreshed.filter((entry) => entry.id !== localId && entry.id !== saved.id)]
@@ -143,7 +148,7 @@ export default function ScanScreen() {
 
       navigation.navigate("Results" as never, {
         analysis,
-        imageUri: image.label?.uri
+        imageUri: image.label?.previewUri || image.label?.uri
       } as never)
       setImage({})
       setStatus("Capture one clear food or label photo.")
@@ -187,7 +192,7 @@ export default function ScanScreen() {
         <View style={styles.previewCard}>
           <Text style={styles.sectionTitle}>Preview</Text>
           <View style={styles.previewWrap}>
-            <Image source={{ uri: image.label.uri }} style={styles.previewImage} />
+            <Image source={{ uri: image.label.previewUri || image.label.uri }} style={styles.previewImage} />
             {lastAnalysis?.nutritionHighlights ? (
               <View style={styles.nutritionOverlay}>
                 {[
