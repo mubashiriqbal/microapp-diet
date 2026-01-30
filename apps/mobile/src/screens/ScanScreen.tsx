@@ -226,20 +226,18 @@ export default function ScanScreen() {
           </Pressable>
         ) : (
           <Pressable style={styles.captureButton} onPress={capturePhoto}>
-            <View style={styles.captureCircle}>
-              <MaterialIcons name="center-focus-strong" size={22} color="#ffffff" />
-            </View>
+            <Ionicons name="qr-code-outline" size={22} color={theme.colors.accent} />
             <Text style={styles.captureLabel}>Scan</Text>
           </Pressable>
         )}
-        <GradientButton
+        <Pressable
           onPress={handleAnalyze}
           disabled={!image.label}
-          style={styles.primaryAction}
+          style={[styles.primaryAction, !image.label ? styles.primaryActionDisabled : null]}
         >
-          <Ionicons name="search" size={18} color="#ffffff" />
+          <Ionicons name="search" size={20} color={theme.colors.accent2} />
           <Text style={styles.primaryActionText}>Analyze</Text>
-        </GradientButton>
+        </Pressable>
       </View>
 
       <View style={styles.section}>
@@ -340,19 +338,14 @@ const styles = StyleSheet.create({
   captureButton: {
     flex: 1,
     minHeight: 64,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6
-  },
-  captureCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.accent,
-    borderWidth: 4,
-    borderColor: theme.colors.panel,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -360,17 +353,33 @@ const styles = StyleSheet.create({
     elevation: 6
   },
   captureLabel: {
-    color: theme.colors.muted,
-    fontSize: 12,
+    color: theme.colors.text,
+    fontSize: 14,
     fontWeight: "700"
   },
   primaryAction: {
     flex: 1,
     minHeight: 64,
-    paddingVertical: 18
+    paddingVertical: 18,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: theme.colors.accent2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6
+  },
+  primaryActionDisabled: {
+    opacity: 0.6
   },
   primaryActionText: {
-    color: "#ffffff",
+    color: theme.colors.text,
     fontWeight: "700",
     fontSize: 16
   },
