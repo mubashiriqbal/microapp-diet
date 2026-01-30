@@ -37,6 +37,7 @@ model ScanHistory {
   createdAt  DateTime @default(now())
 
   productName       String?
+  imageUrl          String?
   extractedText   Json?
   parsedNutrition Json?
   parsedIngredients Json?

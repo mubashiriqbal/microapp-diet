@@ -41,6 +41,7 @@ export async function postHistory(
   config: ApiConfig,
   payload: {
     userId: string
+    imageUrl?: string | null
     analysisSnapshot?: AnalyzeFromImagesResponse
     extractedText?: OCRExtraction
     parsedIngredients?: string[]

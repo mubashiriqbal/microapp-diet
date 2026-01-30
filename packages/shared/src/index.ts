@@ -96,6 +96,7 @@ export type ScanHistory = {
   userId: string
   createdAt: string
   productName?: string | null
+  imageUrl?: string | null
   extractedText?: OCRExtraction | null
   parsedIngredients?: string[] | null
   parsedNutrition?: NutritionParsed | null

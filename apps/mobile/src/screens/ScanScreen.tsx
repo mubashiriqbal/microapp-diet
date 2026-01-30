@@ -113,6 +113,7 @@ export default function ScanScreen() {
           userId: profile.id,
           createdAt: new Date().toISOString(),
           productName: analysis.productName ?? null,
+          imageUrl: analysis.imageUrl || null,
           extractedText: analysis.parsing.extractedText,
           parsedIngredients: analysis.ingredientBreakdown.map((item) => item.name),
           parsedNutrition: analysis.nutritionHighlights,
@@ -129,6 +130,7 @@ export default function ScanScreen() {
 
         const saved = await saveHistory({
           userId: profile.id,
+          imageUrl: analysis.imageUrl || null,
           extractedText: analysis.parsing.extractedText,
           parsedIngredients: analysis.ingredientBreakdown.map((item) => item.name),
           parsedNutrition: analysis.nutritionHighlights,

@@ -218,8 +218,8 @@ export default function DashboardScreen() {
               }
             >
               <View style={styles.scanThumb}>
-                {imageMap[scan.id] ? (
-                  <Image source={{ uri: imageMap[scan.id] }} style={styles.scanThumbImage} />
+                {(scan.imageUrl || imageMap[scan.id]) ? (
+                  <Image source={{ uri: scan.imageUrl || imageMap[scan.id] }} style={styles.scanThumbImage} />
                 ) : null}
               </View>
               <View style={styles.scanInfo}>
@@ -259,15 +259,15 @@ export default function DashboardScreen() {
               }
             >
               <View style={styles.popularThumb}>
-                {imageMap[scan.id] ? (
-                  <Image source={{ uri: imageMap[scan.id] }} style={styles.popularImage} />
+                {(scan.imageUrl || imageMap[scan.id]) ? (
+                  <Image source={{ uri: scan.imageUrl || imageMap[scan.id] }} style={styles.popularImage} />
                 ) : null}
-              </View>
-              <View style={styles.popularFooter}>
-                <Text style={styles.popularTitle}>{scan.productName || "Scan"}</Text>
                 <View style={styles.popularScore}>
                   <Text style={styles.popularScoreText}>{scan.analysisSnapshot?.score?.value ?? "-"}</Text>
                 </View>
+              </View>
+              <View style={styles.popularFooter}>
+                <Text style={styles.popularTitle}>{scan.productName || "Scan"}</Text>
               </View>
             </Pressable>
           ))}
@@ -529,6 +529,9 @@ const styles = StyleSheet.create({
     gap: 8
   },
   popularScore: {
+    position: "absolute",
+    top: 8,
+    right: 8,
     backgroundColor: theme.colors.accent2,
     borderRadius: 999,
     paddingHorizontal: 8,

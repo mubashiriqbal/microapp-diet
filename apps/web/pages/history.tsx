@@ -54,7 +54,7 @@ export default function History() {
               onClick={() => {
                 if (entry.analysisSnapshot) {
                   sessionStorage.setItem("wimf.analysis", JSON.stringify(entry.analysisSnapshot))
-                  const image = getScanImage(entry.id)
+                  const image = entry.imageUrl || getScanImage(entry.id)
                   if (image) sessionStorage.setItem("wimf.preview", image)
                   router.push("/results")
                 }

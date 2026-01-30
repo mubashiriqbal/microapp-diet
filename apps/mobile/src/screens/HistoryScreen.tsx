@@ -107,7 +107,7 @@ export default function HistoryScreen() {
         const scoreValue = typeof score === "number" ? score : null
         const scoreColor = scoreValue === null ? theme.colors.muted : scoreValue >= 70 ? "#22C55E" : scoreValue >= 40 ? "#F59E0B" : theme.colors.warning
         const fallbackKey = `${entry.createdAt}|${entry.productName || entry.analysisSnapshot?.productName || ""}`
-        const previewUri = imageMap[entry.id] || imageMap[fallbackKey] || null
+        const previewUri = entry.imageUrl || imageMap[entry.id] || imageMap[fallbackKey] || null
         return (
           <Pressable
             style={[styles.card, { borderLeftColor: scoreColor }]}

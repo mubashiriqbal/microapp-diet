@@ -73,6 +73,7 @@ export default function Scan() {
           },
           {
             userId,
+            imageUrl: response.imageUrl || null,
             analysisSnapshot: response,
             extractedText: response.parsing.extractedText,
             parsedIngredients: response.ingredientBreakdown.map((item) => item.name),

@@ -22,6 +22,7 @@ export type IngredientBreakdown = {
 
 export type AnalyzeFromImagesResponse = {
   productName: string | null
+  imageUrl?: string | null
   caloriesPer50g: number | null
   nutritionHighlights: NutritionParsed | null
   score: ReturnType<typeof scoreFromParsed>

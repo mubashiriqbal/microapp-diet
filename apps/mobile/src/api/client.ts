@@ -30,6 +30,7 @@ export async function fetchHistory(userId: string) {
 
 export async function saveHistory(payload: {
   userId: string
+  imageUrl?: string | null
   extractedText?: any
   parsedIngredients?: string[]
   parsedNutrition?: any

@@ -1,6 +1,8 @@
 import "dotenv/config"
 import cors from "cors"
 import express from "express"
+import path from "path"
+import fs from "fs/promises"
 import { PrismaClient } from "@prisma/client"
 import multer from "multer"
 import {
@@ -33,6 +35,26 @@ const upload = multer({
   limits: { fileSize: 6 * 1024 * 1024 }
 })
 
+const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads")
+const ensureUploadDir = async () => {
+  try {
+    await fs.mkdir(uploadDir, { recursive: true })
+  } catch {
+    // ignore
+  }
+}
+
+const saveUpload = async (file: Express.Multer.File | undefined, req: express.Request) => {
+  if (!file) return null
+  await ensureUploadDir()
+  const ext = file.mimetype?.includes("png") ? "png" : "jpg"
+  const filename = `${crypto.randomUUID()}.${ext}`
+  const filepath = path.join(uploadDir, filename)
+  await fs.writeFile(filepath, file.buffer)
+  const baseUrl = `${req.protocol}://${req.get("host")}`
+  return `${baseUrl}/uploads/${filename}`
+}
+
 const port = Number(process.env.PORT || 4000)
 const openAiKey = process.env.OPENAI_API_KEY
 const openAiModel = process.env.OPENAI_VISION_MODEL || "gpt-4.1-mini"
@@ -45,6 +67,7 @@ const corsOrigins = (process.env.CORS_ORIGINS || "")
 
 app.use(express.json({ limit: "1mb" }))
 app.use(express.urlencoded({ extended: true, limit: "1mb" }))
+app.use("/uploads", express.static(uploadDir))
 app.use(
   cors({
     origin: corsOrigins.length ? corsOrigins : true,
@@ -760,9 +783,9 @@ const runVisionEstimate = async (buffer: Buffer, mimeType?: string) => {
     "Analyze a food photo (no label). Return JSON only.",
     "If not food: isFood=false and short notFoodReason.",
     "Always give productName (specific dish, prefix 'Likely' if unsure).",
-    "If unknown, return null.",
     "Ingredients: list likely items.",
-    "Nutrition per 100g if possible: calories, protein_g, carbs_g, sugar_g, sodium_mg.",
+    "Nutrition per 100g (always estimate): calories, protein_g, carbs_g, sugar_g, sodium_mg.",
+    "If a value is unknown, make a reasonable estimate rather than null.",
     "Include confidence 0-1."
   ].join(" ")
 
@@ -819,6 +842,7 @@ app.post(
       const ingredientsFile = files.ingredientsImage?.[0]
       const nutritionFile = files.nutritionImage?.[0]
       const frontFile = files.frontImage?.[0]
+      const imageUrl = await saveUpload(frontFile || ingredientsFile || nutritionFile, req)
 
       if (!ingredientsFile && !nutritionFile && !frontFile) {
         return res.status(400).json({ error: "At least one label image is required." })
@@ -982,6 +1006,7 @@ app.post(
 
       return res.json({
         ...analysis,
+        imageUrl,
         suitability,
         parsing: {
           extractedText: extracted,
@@ -1016,6 +1041,7 @@ app.get("/history", async (req, res, next) => {
       userId: entry.userId,
       createdAt: entry.createdAt.toISOString(),
       productName: entry.productName,
+      imageUrl: entry.imageUrl,
       extractedText: entry.extractedText,
       parsedIngredients: entry.parsedIngredients,
       parsedNutrition: entry.parsedNutrition,
@@ -1030,6 +1056,7 @@ app.get("/history", async (req, res, next) => {
 
 const createHistorySchema = z.object({
   userId: z.string().min(1),
+  imageUrl: z.string().url().optional().nullable(),
   analysisSnapshot: z.any(),
   extractedText: z.any().optional(),
   parsedIngredients: z.array(z.string()).optional(),
@@ -1046,6 +1073,7 @@ app.post("/history", async (req, res, next) => {
           data: {
             userId: payload.userId,
             productName: payload.analysisSnapshot?.productName || null,
+            imageUrl: payload.imageUrl || payload.analysisSnapshot?.imageUrl || null,
             extractedText: sanitizeExtracted(payload.extractedText),
             parsedIngredients: payload.parsedIngredients,
             parsedNutrition: payload.parsedNutrition,
@@ -1063,6 +1091,7 @@ app.post("/history", async (req, res, next) => {
       id: created.id,
       userId: created.userId,
       createdAt: created.createdAt.toISOString(),
+      imageUrl: created.imageUrl,
       extractedText: created.extractedText,
       parsedIngredients: created.parsedIngredients,
       parsedNutrition: created.parsedNutrition,
